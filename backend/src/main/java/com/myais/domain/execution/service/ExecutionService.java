@@ -14,7 +14,7 @@ import com.myais.domain.user.repository.UserRepository;
 import com.myais.global.exception.CustomException;
 import com.myais.global.exception.ErrorCode;
 import com.myais.infra.crawler.CrawlerService;
-import com.myais.infra.openai.OpenAIClient;
+import com.myais.infra.gemini.GeminiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,7 +39,7 @@ public class ExecutionService {
     private final ExecutionRepository executionRepository;
     private final AIToolRepository aiToolRepository;
     private final UserRepository userRepository;
-    private final OpenAIClient openAIClient;
+    private final GeminiClient geminiClient;
     private final CrawlerService crawlerService;
     private final ObjectMapper objectMapper;
 
@@ -47,23 +48,41 @@ public class ExecutionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        // 일일 사용량 초기화 체크 (날짜가 바뀌었으면 초기화)
+        checkAndResetDailyUsage(user);
+
+        // FREE 사용자 일일 제한 체크
+        if (user.hasReachedDailyLimit()) {
+            throw new CustomException(ErrorCode.EXECUTION_LIMIT_EXCEEDED);
+        }
+
         AITool aiTool = aiToolRepository.findById(toolId)
                 .orElseThrow(() -> new CustomException(ErrorCode.AI_TOOL_NOT_FOUND));
 
         // Build user message from inputs
         String userMessage = buildUserMessage(aiTool, request.getInputs());
 
-        // Call OpenAI API
-        String result = openAIClient.chat(
+        // 실행 시간 측정 시작
+        long startTime = System.currentTimeMillis();
+
+        // Call Gemini API
+        GeminiClient.ChatResponse chatResponse = geminiClient.chat(
                 aiTool.getSystemPrompt(),
                 userMessage,
-                "gpt-4o-mini",
+                "gemini-2.0-flash-lite",
                 0.7,
                 2048
         );
 
+        // 실행 시간 측정 종료
+        long executionTime = System.currentTimeMillis() - startTime;
+
         // Increment usage count
         aiTool.incrementUsageCount();
+
+        // Increment user's daily usage count
+        user.incrementDailyUsage();
+        userRepository.save(user);
 
         // Save execution history
         try {
@@ -71,17 +90,19 @@ public class ExecutionService {
                     .user(user)
                     .aiTool(aiTool)
                     .inputData(objectMapper.writeValueAsString(request.getInputs()))
-                    .output(result)
+                    .output(chatResponse.getText())
+                    .executionTime(executionTime)
+                    .tokensUsed(chatResponse.getTotalTokens())
                     .build();
 
             executionRepository.save(execution);
 
             return ExecutionDto.ExecuteResponse.builder()
                     .id(execution.getId())
-                    .result(result)
+                    .result(chatResponse.getText())
                     .usage(ExecutionDto.Usage.builder()
                             .promptTokens(0)
-                            .completionTokens(0)
+                            .completionTokens(chatResponse.getTotalTokens() != null ? chatResponse.getTotalTokens() : 0)
                             .build())
                     .createdAt(execution.getCreatedAt())
                     .build();
@@ -93,22 +114,34 @@ public class ExecutionService {
 
     @Transactional
     public SseEmitter executeStream(UUID userId, UUID toolId, ExecutionDto.ExecuteRequest request) {
-        userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 일일 사용량 초기화 체크 (날짜가 바뀌었으면 초기화)
+        checkAndResetDailyUsage(user);
+
+        // FREE 사용자 일일 제한 체크
+        if (user.hasReachedDailyLimit()) {
+            throw new CustomException(ErrorCode.EXECUTION_LIMIT_EXCEEDED);
+        }
 
         AITool aiTool = aiToolRepository.findById(toolId)
                 .orElseThrow(() -> new CustomException(ErrorCode.AI_TOOL_NOT_FOUND));
 
         String userMessage = buildUserMessage(aiTool, request.getInputs());
 
+        // Increment user's daily usage count
+        user.incrementDailyUsage();
+        userRepository.save(user);
+
         SseEmitter emitter = new SseEmitter(300000L); // 5 minutes timeout
 
         // Execute in separate thread
         new Thread(() -> {
-            openAIClient.chatStream(
+            geminiClient.chatStream(
                     aiTool.getSystemPrompt(),
                     userMessage,
-                    "gpt-4o-mini",
+                    "gemini-2.0-flash-lite",
                     0.7,
                     2048,
                     emitter
@@ -118,19 +151,39 @@ public class ExecutionService {
         return emitter;
     }
 
+    // 일일 사용량 초기화 체크 (날짜가 바뀌었으면 초기화)
+    private void checkAndResetDailyUsage(User user) {
+        LocalDate today = LocalDate.now();
+        if (user.getLastUsageResetDate() == null || !user.getLastUsageResetDate().equals(today)) {
+            user.resetDailyUsage();
+        }
+    }
+
     private String buildUserMessage(AITool aiTool, Map<String, Object> inputs) {
         StringBuilder message = new StringBuilder();
 
+        if (inputs == null || inputs.isEmpty()) {
+            log.warn("Inputs is null or empty");
+            return message.toString();
+        }
+
+        log.info("Building user message with inputs: {}", inputs);
+        log.info("AITool inputFields: {}", aiTool.getInputFields());
+
         try {
-            if (aiTool.getInputFields() != null) {
+            if (aiTool.getInputFields() != null && !aiTool.getInputFields().isEmpty()) {
                 List<AIToolDto.InputField> fields = objectMapper.readValue(
                         aiTool.getInputFields(),
                         new TypeReference<List<AIToolDto.InputField>>() {}
                 );
 
+                log.info("Parsed fields: {}", fields.stream().map(f -> f.getName() + ":" + f.getLabel()).collect(Collectors.toList()));
+                log.info("Input keys: {}", inputs.keySet());
+
                 for (AIToolDto.InputField field : fields) {
                     Object value = inputs.get(field.getName());
-                    if (value == null) continue;
+                    log.info("Field name: {}, value from inputs: {}", field.getName(), value);
+                    if (value == null || value.toString().isEmpty()) continue;
 
                     switch (field.getType()) {
                         case "url" -> {
@@ -157,16 +210,27 @@ public class ExecutionService {
                         }
                     }
                 }
+            } else {
+                // No input fields defined - use inputs directly
+                inputs.forEach((key, value) -> {
+                    if (value != null && !value.toString().isEmpty()) {
+                        message.append("## ").append(key).append("\n");
+                        message.append(value.toString()).append("\n\n");
+                    }
+                });
             }
         } catch (JsonProcessingException e) {
             log.error("Failed to parse input fields", e);
             // Fallback: just append all inputs
             inputs.forEach((key, value) -> {
-                message.append("## ").append(key).append("\n");
-                message.append(value.toString()).append("\n\n");
+                if (value != null && !value.toString().isEmpty()) {
+                    message.append("## ").append(key).append("\n");
+                    message.append(value.toString()).append("\n\n");
+                }
             });
         }
 
+        log.info("Final user message: {}", message.toString());
         return message.toString();
     }
 

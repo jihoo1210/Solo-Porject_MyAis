@@ -66,14 +66,15 @@ public class PaymentService {
             // Make API call to TossPayments
             restTemplate.postForObject(url, request, Map.class);
 
-            // Update user subscription
+            // Update user subscription with 30-day expiration
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-            user.setSubscription("PRO");
+            user.activateProSubscription(); // Sets subscription to PRO and expiresAt to 30 days from now
             userRepository.save(user);
 
-            log.info("Payment verified for user: {}, orderId: {}", email, orderId);
+            log.info("Payment verified for user: {}, orderId: {}, expires at: {}",
+                    email, orderId, user.getSubscriptionExpiresAt());
         } catch (Exception e) {
             log.error("Payment verification failed", e);
             throw new CustomException(ErrorCode.PAYMENT_FAILED);
@@ -85,7 +86,7 @@ public class PaymentService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        user.setSubscription("FREE");
+        user.expireSubscription(); // Sets subscription to FREE and clears expiresAt
         userRepository.save(user);
 
         log.info("Subscription cancelled for user: {}", email);
