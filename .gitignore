@@ -18,8 +18,11 @@ frontend/.vite/
 Thumbs.db
 
 # Env files
+.env
 .env.local
 .env.production
+backend/.env
+backend/src/main/resources/.env
 
 # Logs
 *.log

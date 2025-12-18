@@ -11,7 +11,22 @@
       "Bash(git reset:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nPhase 1: 프로젝트 셋업 완료\n\n- Spring Boot 3.5.0 백엔드 구축\n  - JWT 인증 시스템\n  - JPA 엔티티 \\(User, AITool, Execution, Favorite\\)\n  - OpenAI API 클라이언트\n  - AWS S3 업로드 서비스\n  - URL 크롤러 서비스\n  - TossPayments 결제 통합\n\n- React 18 + TypeScript 프론트엔드 구축\n  - TailwindCSS v4 스타일링\n  - Three.js + React Three Fiber 3D 파티클 애니메이션\n  - Zustand 상태 관리\n  - React Hook Form + Zod 유효성 검사\n  - 모든 페이지 및 컴포넌트 구현\n\n- 학습 문서 작성 \\(docs/Phase1_Learning.md\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nPhase 6-8: 히스토리, 결제 시스템, Three.js 랜딩 학습 문서\n\n- Phase 6: 히스토리 페이지 학습 문서\n  - 페이지네이션, 필터링, 검색 기능\n  - HistoryCard 컴포넌트\n  - ExecutionRepository 쿼리\n\n- Phase 7: 결제 시스템 학습 문서\n  - TossPayments API 통합\n  - 구독 생성/검증/취소\n  - Settings 페이지 구독 관리\n\n- Phase 8: Three.js 랜딩 학습 문서\n  - React Three Fiber 설정\n  - 파티클 시스템 및 연결선\n  - 글래스모피즘 UI 스타일\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(./gradlew clean build:*)",
+      "Bash(cat:*)",
+      "Bash(taskkill /F /FI \"WINDOWTITLE eq *gradlew*\")",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill /F /PID 141224)",
+      "Bash(taskkill:*)",
+      "Bash(./gradlew bootRun)",
+      "Bash(tasklist /FI \"WINDOWTITLE eq *gradlew*\")",
+      "Bash(timeout /t 30)",
+      "Bash(tasklist /FI \"IMAGENAME eq java.exe\")",
+      "Bash(curl:*)",
+      "Bash(ls -la \"c:\\\\dev\\\\Portfolios\\\\Solo\\\\Solo-Porject_MyAis\\\\backend\\\\src\\\\main\\\\resources\"\" 2>/dev/null || dir \"c:devPortfoliosSoloSolo-Porject_MyAisbackendsrcmainresources\"\")",
+      "Bash(git commit:*)"
     ]
   }
 }
