@@ -9,6 +9,7 @@ import AuthLayout from './components/layout/AuthLayout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import OAuthCallback from './pages/OAuthCallback';
 import Dashboard from './pages/Dashboard';
 import AIUse from './pages/AIUse';
 import AIBuilder from './pages/AIBuilder';
@@ -48,6 +49,7 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
 
         {/* Auth Routes */}
         <Route element={<AuthLayout />}>
