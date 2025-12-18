@@ -101,4 +101,8 @@ export const utilsApi = {
     );
     return response.data;
   },
+
+  deleteImage: async (url: string): Promise<void> => {
+    await apiClient.delete('/v1/utils/image', { data: { url } });
+  },
 };

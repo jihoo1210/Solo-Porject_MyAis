@@ -25,8 +25,17 @@ public class UtilsController {
     }
 
     @PostMapping("/upload")
-    public ApiResponse<Map<String, String>> uploadImage(@RequestParam MultipartFile file) {
+    public ApiResponse<Map<String, String>> uploadImage(@RequestPart("file") MultipartFile file) {
         String imageUrl = s3Service.uploadImage(file);
         return ApiResponse.success(Map.of("url", imageUrl));
+    }
+
+    @DeleteMapping("/image")
+    public ApiResponse<Void> deleteImage(@RequestBody Map<String, String> request) {
+        String imageUrl = request.get("url");
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            s3Service.deleteFile(imageUrl);
+        }
+        return ApiResponse.success(null);
     }
 }
