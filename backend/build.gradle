@@ -27,6 +27,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
     // JWT
     implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
@@ -36,9 +37,6 @@ dependencies {
     // Database
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
-
-    // OpenAI
-    implementation 'com.theokanning.openai-gpt3-java:service:0.18.2'
 
     // AWS S3
     implementation 'software.amazon.awssdk:s3:2.21.42'
@@ -55,6 +53,9 @@ dependencies {
 
     // DevTools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // Dotenv for .env file support
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
