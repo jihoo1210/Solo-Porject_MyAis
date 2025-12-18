@@ -5,8 +5,12 @@ export interface User {
   name: string;
   avatarUrl?: string;
   subscription?: 'FREE' | 'PRO';
+  subscriptionExpiresAt?: string;
+  dailyUsageCount?: number;
+  dailyUsageLimit?: number; // -1 = 무제한
+  lastUsageResetDate?: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 // Auth Types
@@ -112,9 +116,12 @@ export interface Execution {
   userId: string;
   aiToolId: string;
   aiTool?: AITool;
+  aiToolName?: string;
+  aiToolIcon?: string;
   inputData: Record<string, unknown>;
+  output?: string;
   result?: string | Record<string, unknown>;
-  status: 'PENDING' | 'SUCCESS' | 'FAILED';
+  status?: 'PENDING' | 'SUCCESS' | 'FAILED';
   executionTime?: number;
   tokensUsed?: number;
   isFavorite?: boolean;
