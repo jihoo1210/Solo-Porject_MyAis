@@ -23,23 +23,23 @@ export const historyApi = {
     if (query?.favoriteOnly) params.append('favoriteOnly', 'true');
 
     const response = await apiClient.get<PaginatedResponse<Execution>>(
-      `/history?${params.toString()}`
+      `/v1/history?${params.toString()}`
     );
     return response.data;
   },
 
   getById: async (id: string): Promise<Execution> => {
-    const response = await apiClient.get<Execution>(`/history/${id}`);
+    const response = await apiClient.get<Execution>(`/v1/history/${id}`);
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await apiClient.delete(`/history/${id}`);
+    await apiClient.delete(`/v1/history/${id}`);
   },
 
   toggleFavorite: async (id: string): Promise<{ isFavorite: boolean }> => {
     const response = await apiClient.post<{ isFavorite: boolean }>(
-      `/history/${id}/favorite`
+      `/v1/history/${id}/favorite`
     );
     return response.data;
   },

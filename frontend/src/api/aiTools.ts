@@ -10,39 +10,39 @@ import {
 
 export const aiToolsApi = {
   getAll: async (): Promise<AITool[]> => {
-    const response = await apiClient.get<AITool[]>('/ai-tools');
+    const response = await apiClient.get<AITool[]>('/v1/ai-tools');
     return response.data;
   },
 
   getById: async (id: string): Promise<AITool> => {
-    const response = await apiClient.get<AITool>(`/ai-tools/${id}`);
+    const response = await apiClient.get<AITool>(`/v1/ai-tools/${id}`);
     return response.data;
   },
 
   create: async (data: CreateAIToolRequest): Promise<AITool> => {
-    const response = await apiClient.post<AITool>('/ai-tools', data);
+    const response = await apiClient.post<AITool>('/v1/ai-tools', data);
     return response.data;
   },
 
   update: async (id: string, data: UpdateAIToolRequest): Promise<AITool> => {
-    const response = await apiClient.put<AITool>(`/ai-tools/${id}`, data);
+    const response = await apiClient.put<AITool>(`/v1/ai-tools/${id}`, data);
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await apiClient.delete(`/ai-tools/${id}`);
+    await apiClient.delete(`/v1/ai-tools/${id}`);
   },
 
   toggleFavorite: async (id: string): Promise<{ isFavorite: boolean }> => {
     const response = await apiClient.post<{ isFavorite: boolean }>(
-      `/ai-tools/${id}/favorite`
+      `/v1/ai-tools/${id}/favorite`
     );
     return response.data;
   },
 
   execute: async (id: string, data: ExecuteRequest): Promise<ExecuteResponse> => {
     const response = await apiClient.post<ExecuteResponse>(
-      `/ai-tools/${id}/execute`,
+      `/v1/ai-tools/${id}/execute`,
       data
     );
     return response.data;
@@ -54,7 +54,7 @@ export const aiToolsApi = {
     onChunk: (chunk: string) => void
   ): Promise<void> => {
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/ai-tools/${id}/execute/stream`,
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/v1/ai-tools/${id}/execute/stream`,
       {
         method: 'POST',
         headers: {
@@ -86,7 +86,7 @@ export const aiToolsApi = {
 
 export const utilsApi = {
   crawlUrl: async (url: string): Promise<{ content: string }> => {
-    const response = await apiClient.post<{ content: string }>('/utils/crawl', {
+    const response = await apiClient.post<{ content: string }>('/v1/utils/crawl', {
       url,
     });
     return response.data;
@@ -96,7 +96,7 @@ export const utilsApi = {
     const formData = new FormData();
     formData.append('file', file);
     const response = await uploadClient.post<{ url: string }>(
-      '/utils/upload',
+      '/v1/utils/upload',
       formData
     );
     return response.data;

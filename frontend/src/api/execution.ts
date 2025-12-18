@@ -3,7 +3,7 @@ import { Execution } from '../types';
 
 export const executionApi = {
   execute: async (toolId: string, inputData: Record<string, unknown>): Promise<Execution> => {
-    const response = await apiClient.post<Execution>(`/ai-tools/${toolId}/execute`, inputData);
+    const response = await apiClient.post<Execution>(`/v1/ai-tools/${toolId}/execute`, inputData);
     return response.data;
   },
 
@@ -13,7 +13,7 @@ export const executionApi = {
   ): Promise<Response> => {
     const token = localStorage.getItem('accessToken');
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/ai-tools/${toolId}/execute/stream`,
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/v1/ai-tools/${toolId}/execute/stream`,
       {
         method: 'POST',
         headers: {
