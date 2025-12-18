@@ -1,13 +1,16 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @theme {
   --color-primary-50: #EEF2FF;
   --color-primary-100: #E0E7FF;
+  --color-primary-200: #C7D2FE;
+  --color-primary-300: #A5B4FC;
   --color-primary-400: #818CF8;
   --color-primary-500: #6366F1;
   --color-primary-600: #4F46E5;
   --color-primary-700: #4338CA;
+  --color-primary-800: #3730A3;
+  --color-primary-900: #312E81;
 
   --color-secondary-500: #06B6D4;
   --color-secondary-600: #0891B2;
@@ -17,13 +20,39 @@
   --color-error-500: #EF4444;
 }
 
+:root {
+  --font-sans: 'Outfit', system-ui, sans-serif;
+  /* Dark mode only - ultra transparent backgrounds */
+  --bg-primary: #030712;
+  --bg-secondary: rgba(17, 24, 39, 0.3);
+  --bg-tertiary: rgba(31, 41, 55, 0.25);
+  --bg-glass: rgba(255, 255, 255, 0.02);
+  --bg-glass-light: rgba(255, 255, 255, 0.02);
+  --text-primary: #FFFFFF;
+  --text-secondary: #D1D5DB;
+  --border-color: rgba(75, 85, 99, 0.2);
+}
+
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
-  background-color: #F9FAFB;
-  color: #111827;
+  font-family: 'Outfit', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #030712;
+  color: #F9FAFB;
+}
+
+/* Global cursor pointer for clickable elements */
+button,
+a,
+[role="button"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="submit"],
+input[type="button"],
+label[for],
+.cursor-pointer {
+  cursor: pointer;
 }
 
 .btn-primary {
@@ -32,9 +61,10 @@ body {
   color: white;
   border-radius: 0.5rem;
   font-weight: 500;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   display: inline-flex;
   align-items: center;
+  cursor: pointer;
 }
 
 .btn-primary:hover {
@@ -48,18 +78,20 @@ body {
 
 .btn-secondary {
   padding: 0.5rem 1rem;
-  background-color: white;
-  color: #374151;
-  border: 1px solid #D1D5DB;
+  background-color: var(--bg-glass);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   font-weight: 500;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   display: inline-flex;
   align-items: center;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
 }
 
 .btn-secondary:hover {
-  background-color: #F9FAFB;
+  background-color: var(--bg-tertiary);
 }
 
 .btn-secondary:disabled {
@@ -70,20 +102,109 @@ body {
 .input {
   width: 100%;
   padding: 0.5rem 1rem;
-  border: 1px solid #D1D5DB;
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   outline: none;
+  background-color: var(--bg-glass);
+  color: var(--text-primary);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
 }
 
 .input:focus {
   box-shadow: 0 0 0 2px var(--color-primary-500);
   border-color: transparent;
+  background-color: var(--bg-tertiary);
+}
+
+.input::placeholder {
+  color: var(--text-secondary);
 }
 
 .card {
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-radius: 0.75rem;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  border: 1px solid #F3F4F6;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
   padding: 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+/* Glass effect card */
+.card-glass {
+  background-color: var(--bg-glass);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  backdrop-filter: blur(16px);
+}
+
+/* Custom Select Styling */
+select,
+.select {
+  appearance: none;
+  width: 100%;
+  padding: 0.625rem 2.5rem 0.625rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  outline: none;
+  background-color: var(--bg-glass);
+  color: var(--text-primary);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.2s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+}
+
+select:focus,
+.select:focus {
+  box-shadow: 0 0 0 2px var(--color-primary-500);
+  border-color: transparent;
+  background-color: var(--bg-tertiary);
+}
+
+select:hover,
+.select:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+select option {
+  background-color: #1F2937;
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.7);
+}
+
+/* Glass morphism utility classes */
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+}
+
+.glass-light {
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }

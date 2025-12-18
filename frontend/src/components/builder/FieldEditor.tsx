@@ -14,19 +14,49 @@ const FIELD_TYPES = [
   { value: 'url', label: 'URL' },
 ];
 
+// label을 name(변수명)으로 변환 - 한글도 그대로 사용
+const labelToName = (label: string): string => {
+  const cleaned = label.trim();
+  if (!cleaned) return `입력_${Date.now()}`;
+  return cleaned;
+};
+
 export default function FieldEditor({ fields, onChange }: FieldEditorProps) {
   const addField = () => {
+    const timestamp = Date.now();
+    const baseLabel = '입력';
     const newField: InputField = {
-      name: `field_${Date.now()}`,
-      label: '새 필드',
+      id: `field_${timestamp}`,
+      name: baseLabel,
+      label: baseLabel,
       type: 'text',
       required: false,
     };
+    // 중복 체크
+    const existingNames = fields.map(f => f.name);
+    if (existingNames.includes(newField.name)) {
+      const newLabel = `입력${fields.length + 1}`;
+      newField.name = newLabel;
+      newField.label = newLabel;
+    }
     onChange([...fields, newField]);
   };
 
   const updateField = (index: number, updates: Partial<InputField>) => {
     const newFields = [...fields];
+
+    // label이 변경되면 name도 함께 업데이트
+    if (updates.label !== undefined) {
+      const newName = labelToName(updates.label);
+      // 중복 체크 (자신 제외)
+      const otherNames = fields.filter((_, i) => i !== index).map(f => f.name);
+      if (otherNames.includes(newName)) {
+        updates.name = `${newName}_${Date.now()}`;
+      } else {
+        updates.name = newName;
+      }
+    }
+
     newFields[index] = { ...newFields[index], ...updates };
     onChange(newFields);
   };
@@ -45,50 +75,50 @@ export default function FieldEditor({ fields, onChange }: FieldEditorProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-gray-900">입력 필드</h3>
+        <h3 className="text-base sm:text-lg font-medium text-white">입력 필드</h3>
         <button
           onClick={addField}
-          className="btn-secondary text-sm"
+          className="btn-secondary text-xs sm:text-sm"
         >
-          <Plus className="w-4 h-4 mr-1" />
+          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
           필드 추가
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {fields.map((field, index) => (
           <div
-            key={field.name}
-            className="bg-gray-50 rounded-xl p-4 border border-gray-200"
+            key={field.id || `field-${index}`}
+            className="bg-white/2 rounded-xl p-3 sm:p-4 border border-gray-700/20 backdrop-blur-sm"
           >
-            <div className="flex items-start gap-4">
-              <div className="flex flex-col gap-1 pt-2">
+            <div className="flex items-start gap-2 sm:gap-4">
+              <div className="hidden sm:flex flex-col gap-1 pt-2">
                 <button
                   onClick={() => moveField(index, index - 1)}
                   disabled={index === 0}
-                  className="p-1 rounded hover:bg-gray-200 disabled:opacity-30"
+                  className="p-1 rounded hover:bg-white/10 disabled:opacity-30"
                 >
                   <GripVertical className="w-4 h-4 text-gray-400" />
                 </button>
               </div>
 
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
                     필드 이름
                   </label>
                   <input
                     type="text"
                     value={field.label}
                     onChange={(e) => updateField(index, { label: e.target.value })}
-                    className="input"
+                    className="input text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
                     타입
                   </label>
                   <select
@@ -98,7 +128,7 @@ export default function FieldEditor({ fields, onChange }: FieldEditorProps) {
                         type: e.target.value as InputField['type'],
                       })
                     }
-                    className="input"
+                    className="input text-sm"
                   >
                     {FIELD_TYPES.map((type) => (
                       <option key={type.value} value={type.value}>
@@ -109,7 +139,7 @@ export default function FieldEditor({ fields, onChange }: FieldEditorProps) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
                     플레이스홀더
                   </label>
                   <input
@@ -117,25 +147,39 @@ export default function FieldEditor({ fields, onChange }: FieldEditorProps) {
                     value={field.placeholder || ''}
                     onChange={(e) => updateField(index, { placeholder: e.target.value })}
                     placeholder="예: 내용을 입력하세요"
-                    className="input"
+                    className="input text-sm"
                   />
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={field.required}
-                      onChange={(e) => updateField(index, { required: e.target.checked })}
-                      className="w-4 h-4 text-primary-600 rounded"
-                    />
-                    <span className="text-sm text-gray-700">필수</span>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
+                    필수 입력
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => updateField(index, { required: !field.required })}
+                    className={`relative w-full h-9 sm:h-10 rounded-lg transition-colors ${
+                      field.required
+                        ? 'bg-primary-600'
+                        : 'bg-gray-700/50'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 w-7 h-7 sm:w-8 sm:h-8 bg-white rounded-md shadow transition-all ${
+                        field.required ? 'left-[calc(100%-2rem)] sm:left-[calc(100%-2.25rem)]' : 'left-1'
+                      }`}
+                    />
+                    <span className={`absolute inset-0 flex items-center justify-center text-xs sm:text-sm font-medium ${
+                      field.required ? 'text-white' : 'text-gray-400'
+                    }`}>
+                      {field.required ? '필수' : '선택'}
+                    </span>
+                  </button>
                 </div>
 
                 {field.type === 'select' && (
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="col-span-1 sm:col-span-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
                       옵션 (콤마로 구분)
                     </label>
                     <input
@@ -147,14 +191,14 @@ export default function FieldEditor({ fields, onChange }: FieldEditorProps) {
                         })
                       }
                       placeholder="옵션1, 옵션2, 옵션3"
-                      className="input"
+                      className="input text-sm"
                     />
                   </div>
                 )}
 
                 {field.type === 'url' && (
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="col-span-1 sm:col-span-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
                       도움말
                     </label>
                     <input
@@ -162,7 +206,7 @@ export default function FieldEditor({ fields, onChange }: FieldEditorProps) {
                       value={field.helpText || ''}
                       onChange={(e) => updateField(index, { helpText: e.target.value })}
                       placeholder="URL을 입력하면 자동으로 내용을 가져옵니다"
-                      className="input"
+                      className="input text-sm"
                     />
                   </div>
                 )}
@@ -171,7 +215,7 @@ export default function FieldEditor({ fields, onChange }: FieldEditorProps) {
               <button
                 onClick={() => removeField(index)}
                 disabled={fields.length <= 1}
-                className="p-2 rounded-lg hover:bg-red-100 text-red-500 disabled:opacity-30"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-red-900/30 text-red-400 disabled:opacity-30"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

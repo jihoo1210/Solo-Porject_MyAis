@@ -34,49 +34,53 @@ export default function History() {
   };
 
   const filteredExecutions = executions.filter(
-    (execution) =>
-      execution.aiTool?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (typeof execution.inputData === 'object' &&
-        Object.values(execution.inputData).some(
-          (v) =>
-            typeof v === 'string' &&
-            v.toLowerCase().includes(searchQuery.toLowerCase())
-        ))
+    (execution) => {
+      const toolName = execution.aiToolName || execution.aiTool?.name || '';
+      return (
+        toolName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (execution.inputData && typeof execution.inputData === 'object' &&
+          Object.values(execution.inputData).some(
+            (v) =>
+              typeof v === 'string' &&
+              v.toLowerCase().includes(searchQuery.toLowerCase())
+          ))
+      );
+    }
   );
 
   const uniqueTools = Array.from(
     new Map(
       executions
-        .filter((e) => e.aiTool)
-        .map((e) => [e.aiTool!.id, e.aiTool])
+        .filter((e) => e.aiToolId)
+        .map((e) => [e.aiToolId, { id: e.aiToolId, name: e.aiToolName || e.aiTool?.name, icon: e.aiToolIcon || e.aiTool?.icon }])
     ).values()
   );
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Clock className="w-6 h-6" />
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 text-white">
+          <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
           실행 기록
         </h1>
-        <p className="text-gray-500 mt-1">AI 도구 사용 기록을 확인하세요</p>
+        <p className="mt-1 text-sm sm:text-base text-gray-300">AI 도구 사용 기록을 확인하세요</p>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 z-10 pointer-events-none" />
           <input
             type="text"
             placeholder="기록 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input pl-10"
+            className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/2 border-gray-700/30 text-white placeholder-gray-400 backdrop-blur-sm text-sm sm:text-base"
           />
         </div>
 
-        <div className="relative">
+        <div className="relative self-end sm:self-auto">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <select
             value={selectedTool}
@@ -84,7 +88,7 @@ export default function History() {
               setSelectedTool(e.target.value);
               setPage(0);
             }}
-            className="input pl-9 pr-8 appearance-none"
+            className="pl-9 pr-8 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/5 border-gray-700/30 text-white backdrop-blur-sm text-sm sm:text-base"
           >
             <option value="all">모든 AI</option>
             {uniqueTools.map((tool) => (
@@ -102,59 +106,62 @@ export default function History() {
           <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
         </div>
       ) : filteredExecutions.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">실행 기록이 없습니다</p>
+        <div className="text-center py-12 rounded-xl border bg-white/5 border-gray-700/20 backdrop-blur-sm">
+          <Clock className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 text-gray-500" />
+          <p className="text-sm sm:text-base text-gray-300">실행 기록이 없습니다</p>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+          <div className="space-y-2 sm:space-y-3">
             {filteredExecutions.map((execution) => (
               <Link
                 key={execution.id}
                 to={`/history/${execution.id}`}
-                className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+                className="block rounded-xl border p-3 sm:p-4 transition-all bg-white/5 border-gray-700/20 backdrop-blur-sm hover:bg-white/10 hover:border-primary-500/30"
               >
-                <span className="text-3xl">{execution.aiTool?.icon}</span>
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <span className="text-2xl sm:text-3xl shrink-0">
+                    {execution.aiToolIcon || execution.aiTool?.icon || '🤖'}
+                  </span>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900">
-                      {execution.aiTool?.name}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1 sm:mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-semibold text-white text-sm sm:text-base truncate">
+                          {execution.aiToolName || execution.aiTool?.name || 'AI Tool'}
+                        </p>
+                        {execution.output && (
+                          <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-xs bg-green-900/50 text-green-400 shrink-0">
+                            완료
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                        {new Date(execution.createdAt).toLocaleString('ko-KR', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+
+                    {/* 입력 내용 */}
+                    <p className="text-xs sm:text-sm text-gray-400 mb-1 sm:mb-2 truncate">
+                      <span className="text-gray-500">입력:</span>{' '}
+                      {execution.inputData && typeof execution.inputData === 'object'
+                        ? String(Object.values(execution.inputData)[0] || '-')
+                        : '-'}
                     </p>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs ${
-                        execution.status === 'SUCCESS'
-                          ? 'bg-green-100 text-green-700'
-                          : execution.status === 'FAILED'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}
-                    >
-                      {execution.status === 'SUCCESS'
-                        ? '성공'
-                        : execution.status === 'FAILED'
-                        ? '실패'
-                        : '처리중'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 truncate">
-                    {typeof execution.inputData === 'object'
-                      ? String(Object.values(execution.inputData)[0] || '')
-                      : ''}
-                  </p>
-                </div>
 
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">
-                    {new Date(execution.createdAt).toLocaleDateString('ko-KR')}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {new Date(execution.createdAt).toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
+                    {/* 결과 미리보기 */}
+                    {execution.output && (
+                      <p className="text-xs sm:text-sm text-gray-300 line-clamp-2">
+                        {execution.output.replace(/[#*`]/g, '').slice(0, 200)}
+                        {execution.output.length > 200 && '...'}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}
@@ -162,37 +169,49 @@ export default function History() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
+            <div className="flex items-center justify-center gap-1 sm:gap-2 mt-6">
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 sm:p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-300 hover:bg-white/10"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
               <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPage(i)}
-                    className={`w-8 h-8 rounded-lg text-sm ${
-                      page === i
-                        ? 'bg-primary-600 text-white'
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  let pageNum = i;
+                  if (totalPages > 5) {
+                    if (page < 3) {
+                      pageNum = i;
+                    } else if (page > totalPages - 3) {
+                      pageNum = totalPages - 5 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs sm:text-sm transition-colors ${
+                        page === pageNum
+                          ? 'bg-primary-600 text-white'
+                          : 'hover:bg-white/10 text-gray-300'
+                      }`}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  );
+                })}
               </div>
 
               <button
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page === totalPages - 1}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 sm:p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-300 hover:bg-white/10"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           )}

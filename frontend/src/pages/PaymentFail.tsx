@@ -28,39 +28,45 @@ export default function PaymentFail() {
   };
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center max-w-md">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <XCircle className="w-10 h-10 text-red-600" />
+    <div className="min-h-[60vh] flex items-center justify-center px-4">
+      <div className="text-center max-w-md w-full">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <XCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
           결제에 실패했습니다
         </h1>
-        <p className="text-gray-600 mb-6">
+        <p className="text-sm sm:text-base text-gray-400 mb-6">
           {getErrorDescription(errorCode)}
         </p>
 
         {errorCode && (
-          <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
-            <div className="text-sm text-gray-500 mb-1">오류 코드</div>
-            <div className="font-mono text-sm text-gray-700">{errorCode}</div>
+          <div className="bg-white/5 rounded-xl border border-gray-700/20 p-3 sm:p-4 mb-6 text-left backdrop-blur-sm">
+            <div className="text-xs sm:text-sm text-gray-500 mb-1">오류 코드</div>
+            <div className="font-mono text-xs sm:text-sm text-gray-300">{errorCode}</div>
           </div>
         )}
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link to="/payment" className="btn-primary w-full sm:w-auto">
+          <Link
+            to="/payment"
+            className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm sm:text-base"
+          >
             <RefreshCw className="w-4 h-4 mr-2" />
             다시 시도
           </Link>
-          <Link to="/dashboard" className="btn-secondary w-full sm:w-auto">
+          <Link
+            to="/dashboard"
+            className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-white/5 border border-gray-700/30 text-gray-300 hover:bg-white/10 rounded-lg transition-colors text-sm sm:text-base"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             대시보드로 이동
           </Link>
         </div>
 
-        <p className="text-sm text-gray-500 mt-8">
+        <p className="text-xs sm:text-sm text-gray-500 mt-6 sm:mt-8">
           문제가 계속되면{' '}
-          <a href="mailto:support@myais.com" className="text-primary-600 hover:underline">
+          <a href="mailto:support@myais.com" className="text-primary-400 hover:underline">
             고객센터
           </a>
           로 문의해주세요.

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Key, Bell, CreditCard, LogOut, Loader2, Save, Trash2 } from 'lucide-react';
+import { User, Key, CreditCard, LogOut, Loader2, Save, Trash2, ChevronLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../store';
 import { authApi, paymentApi } from '../api';
@@ -19,9 +19,10 @@ interface PasswordFormData {
 export default function Settings() {
   const navigate = useNavigate();
   const { user, logout, setUser } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'subscription' | 'notifications'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'subscription'>('profile');
   const [isLoading, setIsLoading] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(true);
 
   const profileForm = useForm<ProfileFormData>({
     defaultValues: {
@@ -104,31 +105,35 @@ export default function Settings() {
     { id: 'profile', label: '프로필', icon: User },
     { id: 'password', label: '비밀번호', icon: Key },
     { id: 'subscription', label: '구독', icon: CreditCard },
-    { id: 'notifications', label: '알림', icon: Bell },
   ];
 
+  const handleTabChange = (tabId: typeof activeTab) => {
+    setActiveTab(tabId);
+    setShowMobileMenu(false);
+  };
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">설정</h1>
-        <p className="text-gray-500 mt-1">계정 및 앱 설정을 관리하세요</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-white">설정</h1>
+        <p className="mt-1 text-sm sm:text-base text-gray-300">계정 및 앱 설정을 관리하세요</p>
       </div>
 
-      <div className="flex gap-6">
-        {/* Sidebar */}
-        <div className="w-48 flex-shrink-0">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+        {/* Sidebar - Mobile: Show/Hide based on state */}
+        <div className={`${showMobileMenu ? 'block' : 'hidden'} md:block w-full md:w-48 shrink-0`}>
           <nav className="space-y-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-left transition-colors ${
+                  onClick={() => handleTabChange(tab.id as typeof activeTab)}
+                  className={`w-full flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-left transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-primary-600/30 text-primary-400'
+                      : 'text-gray-300 hover:bg-white/10'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -137,11 +142,11 @@ export default function Settings() {
               );
             })}
 
-            <hr className="my-4" />
+            <hr className="my-3 sm:my-4 border-gray-700/20" />
 
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-4 py-2 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors"
+              className="w-full flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-left transition-colors text-red-400 hover:bg-red-900/30"
             >
               <LogOut className="w-5 h-5" />
               로그아웃
@@ -150,39 +155,52 @@ export default function Settings() {
         </div>
 
         {/* Content */}
-        <div className="flex-1">
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className={`${!showMobileMenu ? 'block' : 'hidden'} md:block flex-1`}>
+          {/* Mobile Back Button */}
+          <button
+            onClick={() => setShowMobileMenu(true)}
+            className="md:hidden flex items-center gap-2 text-gray-300 mb-4 hover:text-white transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span>설정 메뉴로 돌아가기</span>
+          </button>
+
+          <div className="rounded-xl border p-4 sm:p-6 bg-white/5 border-gray-700/20 backdrop-blur-sm">
             {activeTab === 'profile' && (
-              <form onSubmit={profileForm.handleSubmit(handleProfileUpdate)} className="space-y-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">프로필 설정</h2>
+              <form onSubmit={profileForm.handleSubmit(handleProfileUpdate)} className="space-y-4 sm:space-y-6">
+                <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-white">프로필 설정</h2>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-300">
                     이름
                   </label>
                   <input
                     {...profileForm.register('name', { required: true })}
-                    className="input"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/5 border-gray-700/30 text-white backdrop-blur-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-300">
                     이메일
                   </label>
                   <input
                     {...profileForm.register('email', { required: true })}
                     type="email"
-                    className="input"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/5 border-gray-700/30 text-gray-400 backdrop-blur-sm"
                     disabled
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm mt-1 text-gray-400">
                     이메일은 변경할 수 없습니다
                   </p>
                 </div>
 
                 <div className="flex justify-end">
-                  <button type="submit" disabled={isLoading} className="btn-primary">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-600/50 text-white rounded-lg transition-colors text-sm sm:text-base"
+                  >
                     {isLoading ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
@@ -195,27 +213,27 @@ export default function Settings() {
             )}
 
             {activeTab === 'password' && (
-              <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)} className="space-y-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">비밀번호 변경</h2>
+              <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)} className="space-y-4 sm:space-y-6">
+                <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-white">비밀번호 변경</h2>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-300">
                     현재 비밀번호
                   </label>
                   <input
                     {...passwordForm.register('currentPassword', { required: true })}
                     type="password"
-                    className="input"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/5 border-gray-700/30 text-white backdrop-blur-sm"
                   />
                   {passwordForm.formState.errors.currentPassword && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red-500 text-xs sm:text-sm mt-1">
                       {passwordForm.formState.errors.currentPassword.message}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-300">
                     새 비밀번호
                   </label>
                   <input
@@ -227,33 +245,37 @@ export default function Settings() {
                       },
                     })}
                     type="password"
-                    className="input"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/5 border-gray-700/30 text-white backdrop-blur-sm"
                   />
                   {passwordForm.formState.errors.newPassword && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red-500 text-xs sm:text-sm mt-1">
                       {passwordForm.formState.errors.newPassword.message}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2 text-gray-300">
                     새 비밀번호 확인
                   </label>
                   <input
                     {...passwordForm.register('confirmPassword', { required: true })}
                     type="password"
-                    className="input"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/5 border-gray-700/30 text-white backdrop-blur-sm"
                   />
                   {passwordForm.formState.errors.confirmPassword && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-red-500 text-xs sm:text-sm mt-1">
                       {passwordForm.formState.errors.confirmPassword.message}
                     </p>
                   )}
                 </div>
 
                 <div className="flex justify-end">
-                  <button type="submit" disabled={isLoading} className="btn-primary">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-600/50 text-white rounded-lg transition-colors text-sm sm:text-base"
+                  >
                     {isLoading ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
@@ -266,19 +288,19 @@ export default function Settings() {
             )}
 
             {activeTab === 'subscription' && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">구독 관리</h2>
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-white">구독 관리</h2>
 
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="rounded-xl p-3 sm:p-4 bg-white/5 border border-gray-700/20">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-sm text-gray-500">현재 플랜</div>
-                      <div className="text-xl font-semibold text-gray-900">
+                      <div className="text-xs sm:text-sm text-gray-300">현재 플랜</div>
+                      <div className="text-lg sm:text-xl font-semibold text-white">
                         {user?.subscription === 'PRO' ? 'Pro' : 'Free'}
                       </div>
                     </div>
                     {user?.subscription === 'PRO' && (
-                      <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm">
+                      <span className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm bg-primary-900/50 text-primary-400">
                         활성
                       </span>
                     )}
@@ -287,15 +309,15 @@ export default function Settings() {
 
                 {user?.subscription === 'PRO' ? (
                   <>
-                    <div className="border-t border-gray-200 pt-4">
-                      <h3 className="font-medium text-gray-900 mb-2">구독 취소</h3>
-                      <p className="text-sm text-gray-500 mb-4">
+                    <div className="border-t pt-4 border-gray-700/20">
+                      <h3 className="font-medium mb-2 text-white text-sm sm:text-base">구독 취소</h3>
+                      <p className="text-xs sm:text-sm mb-4 text-gray-300">
                         구독을 취소해도 결제 기간까지는 Pro 기능을 계속 이용할 수 있습니다.
                       </p>
                       <button
                         onClick={handleCancelSubscription}
                         disabled={isCanceling}
-                        className="btn-secondary text-red-600 hover:bg-red-50"
+                        className="flex items-center px-3 sm:px-4 py-2 rounded-lg transition-colors bg-white/5 border border-gray-700/20 text-red-400 hover:bg-red-900/30 text-sm sm:text-base"
                       >
                         {isCanceling ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -307,7 +329,7 @@ export default function Settings() {
                 ) : (
                   <button
                     onClick={() => navigate('/payment')}
-                    className="btn-primary"
+                    className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm sm:text-base"
                   >
                     Pro로 업그레이드
                   </button>
@@ -315,52 +337,17 @@ export default function Settings() {
               </div>
             )}
 
-            {activeTab === 'notifications' && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">알림 설정</h2>
-
-                <div className="space-y-4">
-                  <label className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-gray-900">이메일 알림</div>
-                      <div className="text-sm text-gray-500">
-                        중요한 업데이트와 공지사항을 이메일로 받습니다
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="w-5 h-5 text-primary-600 rounded"
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-gray-900">마케팅 알림</div>
-                      <div className="text-sm text-gray-500">
-                        새로운 기능과 프로모션 정보를 받습니다
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 text-primary-600 rounded"
-                    />
-                  </label>
-                </div>
-              </div>
-            )}
-
             {/* Danger Zone */}
             {activeTab === 'profile' && (
-              <div className="mt-8 pt-8 border-t border-gray-200">
-                <h3 className="text-lg font-semibold text-red-600 mb-4">위험 영역</h3>
-                <p className="text-sm text-gray-500 mb-4">
+              <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-700/20">
+                <h3 className="text-base sm:text-lg font-semibold text-red-500 mb-3 sm:mb-4">위험 영역</h3>
+                <p className="text-xs sm:text-sm mb-4 text-gray-300">
                   계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.
                   이 작업은 되돌릴 수 없습니다.
                 </p>
                 <button
                   onClick={handleDeleteAccount}
-                  className="btn-secondary text-red-600 hover:bg-red-50"
+                  className="flex items-center px-3 sm:px-4 py-2 rounded-lg transition-colors bg-white/5 border border-gray-700/20 text-red-400 hover:bg-red-900/30 text-sm sm:text-base"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   계정 삭제

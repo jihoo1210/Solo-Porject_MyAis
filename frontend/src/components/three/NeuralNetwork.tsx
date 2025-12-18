@@ -2,12 +2,14 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Points, PointMaterial } from '@react-three/drei';
 import * as THREE from 'three';
+import { useUIStore } from '../../store';
 
 interface ParticleProps {
   count?: number;
+  isDark?: boolean;
 }
 
-function Particles({ count = 2000 }: ParticleProps) {
+function Particles({ count = 2000, isDark = false }: ParticleProps) {
   const ref = useRef<THREE.Points>(null);
 
   const particles = useMemo(() => {
@@ -31,7 +33,7 @@ function Particles({ count = 2000 }: ParticleProps) {
     <Points ref={ref} positions={particles} stride={3} frustumCulled={false}>
       <PointMaterial
         transparent
-        color="#6366f1"
+        color={isDark ? "#818CF8" : "#6366f1"}
         size={0.02}
         sizeAttenuation={true}
         depthWrite={false}
@@ -41,7 +43,11 @@ function Particles({ count = 2000 }: ParticleProps) {
   );
 }
 
-function Connections() {
+interface ConnectionsProps {
+  isDark?: boolean;
+}
+
+function Connections({ isDark = false }: ConnectionsProps) {
   const ref = useRef<THREE.LineSegments>(null);
 
   const lines = useMemo(() => {
@@ -79,12 +85,24 @@ function Connections() {
 
   return (
     <lineSegments ref={ref} geometry={lines}>
-      <lineBasicMaterial color="#8b5cf6" transparent opacity={0.3} />
+      <lineBasicMaterial
+        color={isDark ? "#A5B4FC" : "#8b5cf6"}
+        transparent
+        opacity={isDark ? 0.2 : 0.3}
+      />
     </lineSegments>
   );
 }
 
-export default function NeuralNetwork() {
+interface NeuralNetworkProps {
+  opacity?: number;
+  particleCount?: number;
+}
+
+export default function NeuralNetwork({ opacity = 1, particleCount = 3000 }: NeuralNetworkProps) {
+  const { theme } = useUIStore();
+  const isDark = theme === 'dark';
+
   return (
     <Canvas
       camera={{ position: [0, 0, 5], fov: 75 }}
@@ -95,11 +113,12 @@ export default function NeuralNetwork() {
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
+        opacity,
       }}
     >
       <ambientLight intensity={0.5} />
-      <Particles count={3000} />
-      <Connections />
+      <Particles count={particleCount} isDark={isDark} />
+      <Connections isDark={isDark} />
     </Canvas>
   );
 }

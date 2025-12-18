@@ -86,19 +86,18 @@ export default function Payment() {
   const currentPlan = user?.subscription || 'FREE';
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6">
       {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">요금제 선택</h1>
-        <p className="text-gray-500">
+      <div className="text-center mb-8 sm:mb-12">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">요금제 선택</h1>
+        <p className="text-sm sm:text-base text-gray-400">
           Pro 플랜으로 업그레이드하여 모든 기능을 이용하세요
         </p>
       </div>
 
       {/* Plans */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {PLANS.map((plan) => {
-          const Icon = plan.icon;
           const isCurrentPlan = currentPlan === plan.id;
           const isSelected = selectedPlan === plan.id;
 
@@ -106,60 +105,51 @@ export default function Payment() {
             <button
               key={plan.id}
               onClick={() => setSelectedPlan(plan.id)}
-              className={`relative bg-white rounded-2xl p-6 text-left transition-all ${
+              className={`relative rounded-xl sm:rounded-2xl p-4 sm:p-6 text-left transition-all flex flex-col ${
                 isSelected
-                  ? 'ring-2 ring-primary-600 shadow-lg'
-                  : 'border border-gray-200 hover:border-gray-300'
+                  ? plan.id === 'PRO'
+                    ? 'bg-gradient-to-b from-indigo-600 to-purple-700 ring-2 ring-indigo-400 shadow-lg shadow-indigo-500/25'
+                    : 'bg-gray-800 ring-2 ring-primary-500'
+                  : plan.id === 'PRO'
+                    ? 'bg-gradient-to-b from-indigo-600/80 to-purple-700/80 hover:from-indigo-600 hover:to-purple-700'
+                    : 'bg-gray-800 border border-gray-700 hover:border-gray-600'
               }`}
             >
               {plan.recommended && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-600 text-white text-xs font-medium px-3 py-1 rounded-full">
-                  추천
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-xs font-semibold px-2 sm:px-3 py-1 rounded-full">
+                  인기
                 </span>
               )}
 
               {isCurrentPlan && (
-                <span className="absolute top-4 right-4 bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
+                <span className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-green-900/50 text-green-400 text-xs font-medium px-2 py-1 rounded-full">
                   현재 플랜
                 </span>
               )}
 
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    plan.id === 'PRO'
-                      ? 'bg-primary-100 text-primary-600'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  <Icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">{plan.name}</h2>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-gray-900">
-                      {plan.price === 0
-                        ? '무료'
-                        : `₩${plan.price.toLocaleString()}`}
-                    </span>
-                    {plan.price > 0 && (
-                      <span className="text-gray-500">/{plan.period}</span>
-                    )}
-                  </div>
-                </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">{plan.name}</h2>
+              <div className="mb-4 sm:mb-6">
+                <span className="text-3xl sm:text-4xl font-bold text-white">
+                  {plan.price === 0
+                    ? '₩0'
+                    : `₩${plan.price.toLocaleString()}`}
+                </span>
+                {plan.price > 0 && (
+                  <span className="text-sm sm:text-base text-gray-300">/{plan.period}</span>
+                )}
               </div>
 
-              <ul className="space-y-3 mb-4">
+              <ul className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 flex-1">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700">{feature}</span>
+                  <li key={feature} className="flex items-center gap-2 text-xs sm:text-sm">
+                    <Check className="w-4 h-4 text-green-400 shrink-0" />
+                    <span className="text-white">{feature}</span>
                   </li>
                 ))}
                 {plan.limitations.map((limitation) => (
                   <li
                     key={limitation}
-                    className="flex items-center gap-2 text-sm text-gray-400"
+                    className="flex items-center gap-2 text-xs sm:text-sm text-gray-400"
                   >
                     <span className="w-4 h-4 flex items-center justify-center">
                       ×
@@ -170,15 +160,13 @@ export default function Payment() {
               </ul>
 
               <div
-                className={`w-5 h-5 rounded-full border-2 absolute top-6 right-6 ${
-                  isSelected
-                    ? 'border-primary-600 bg-primary-600'
-                    : 'border-gray-300'
+                className={`w-full py-2.5 sm:py-3 text-center font-semibold rounded-lg sm:rounded-xl transition-all text-sm sm:text-base ${
+                  plan.id === 'PRO'
+                    ? 'bg-white text-indigo-600 hover:bg-gray-100'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 }`}
               >
-                {isSelected && (
-                  <Check className="w-full h-full text-white p-0.5" />
-                )}
+                {plan.id === 'FREE' ? '시작하기' : '구독하기'}
               </div>
             </button>
           );
@@ -190,11 +178,11 @@ export default function Payment() {
         <button
           onClick={handleSubscribe}
           disabled={isLoading || currentPlan === selectedPlan}
-          className="btn-primary px-8 py-3 text-lg"
+          className="inline-flex items-center px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-lg bg-primary-600 hover:bg-primary-700 disabled:bg-gray-700 disabled:text-gray-400 text-white rounded-lg sm:rounded-xl font-semibold transition-all w-full sm:w-auto justify-center"
         >
           {isLoading ? (
             <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
               처리 중...
             </>
           ) : currentPlan === selectedPlan ? (
@@ -207,47 +195,51 @@ export default function Payment() {
         </button>
 
         {selectedPlan === 'PRO' && (
-          <p className="text-sm text-gray-500 mt-4">
+          <p className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">
             언제든지 취소할 수 있습니다. 취소 후에도 결제 기간까지 이용 가능합니다.
           </p>
         )}
       </div>
 
       {/* FAQ */}
-      <div className="mt-16">
-        <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">
+      <div className="mt-12 sm:mt-16">
+        <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 text-center">
           자주 묻는 질문
         </h2>
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-2">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="bg-white/5 rounded-lg sm:rounded-xl border border-gray-700/20 p-3 sm:p-4 backdrop-blur-sm">
+            <h3 className="font-medium text-white mb-1 sm:mb-2 text-sm sm:text-base">
               결제는 어떻게 진행되나요?
             </h3>
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-400 text-xs sm:text-sm">
               토스페이먼츠를 통해 안전하게 결제됩니다. 신용카드, 체크카드를 사용할
               수 있습니다.
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-2">
+          <div className="bg-white/5 rounded-lg sm:rounded-xl border border-gray-700/20 p-3 sm:p-4 backdrop-blur-sm">
+            <h3 className="font-medium text-white mb-1 sm:mb-2 text-sm sm:text-base">
               구독을 취소하면 어떻게 되나요?
             </h3>
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-400 text-xs sm:text-sm">
               구독을 취소해도 결제 기간까지는 Pro 기능을 계속 이용할 수 있습니다.
               기간 만료 후 Free 플랜으로 전환됩니다.
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-medium text-gray-900 mb-2">
+          <div className="bg-white/5 rounded-lg sm:rounded-xl border border-gray-700/20 p-3 sm:p-4 backdrop-blur-sm">
+            <h3 className="font-medium text-white mb-1 sm:mb-2 text-sm sm:text-base">
               환불이 가능한가요?
             </h3>
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-400 text-xs sm:text-sm">
               결제 후 7일 이내에 서비스를 전혀 이용하지 않은 경우 전액 환불이
               가능합니다. 고객센터로 문의해주세요.
             </p>
           </div>
         </div>
       </div>
+
+      <p className="text-center text-gray-500 text-xs sm:text-sm mt-6 sm:mt-8">
+        TossPayments 안전 결제 · 언제든지 취소 가능
+      </p>
     </div>
   );
 }

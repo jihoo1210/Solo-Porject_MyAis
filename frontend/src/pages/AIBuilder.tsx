@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Eye, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Loader2, Crown } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { AITool, InputField, OutputConfig, AIPersonality } from '../types';
+import { InputField, OutputConfig, AIPersonality } from '../types';
 import { aiToolsApi } from '../api';
+import { useAuthStore, useAIToolsStore } from '../store';
 import FieldEditor from '../components/builder/FieldEditor';
 import PersonalityEditor from '../components/builder/PersonalityEditor';
 import PromptEditor from '../components/builder/PromptEditor';
 import BuilderPreview from '../components/builder/BuilderPreview';
+
+const FREE_AI_LIMIT = 3;
 
 interface FormData {
   name: string;
@@ -15,16 +18,18 @@ interface FormData {
   icon: string;
 }
 
-const EMOJI_OPTIONS = ['🤖', '✨', '📝', '🎨', '💼', '📊', '🔍', '💡', '🎯', '⚡', '🌟', '🔮'];
+const EMOJI_OPTIONS = ['🐶', '🐱', '🐰', '🦊', '🐻', '🐼', '🐨', '🦁', '🐯', '🐸', '🐧', '🦄'];
 
 export default function AIBuilder() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const { tools } = useAIToolsStore();
   const [step, setStep] = useState<'basic' | 'fields' | 'personality' | 'prompt' | 'preview'>(
     'basic'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputFields, setInputFields] = useState<InputField[]>([
-    { name: 'input', label: '입력', type: 'textarea', required: true },
+    { id: `field_${Date.now()}`, name: '입력', label: '입력', type: 'textarea', required: true },
   ]);
   const [personality, setPersonality] = useState<AIPersonality>({
     preset: 'professional',
@@ -39,6 +44,18 @@ export default function AIBuilder() {
     maxLength: 2000,
   });
 
+  // Free 회원의 AI 개수 제한 확인
+  const myTools = tools.filter((tool) => !tool.isDefault);
+  const isFreeTier = !user?.subscription || user.subscription === 'FREE';
+  const hasReachedLimit = isFreeTier && myTools.length >= FREE_AI_LIMIT;
+
+  // 제한에 도달한 경우 리다이렉트
+  useEffect(() => {
+    if (hasReachedLimit) {
+      navigate('/dashboard');
+    }
+  }, [hasReachedLimit, navigate]);
+
   const {
     register,
     handleSubmit,
@@ -49,7 +66,7 @@ export default function AIBuilder() {
     defaultValues: {
       name: '',
       description: '',
-      icon: '🤖',
+      icon: '🐶',
     },
   });
 
@@ -132,72 +149,72 @@ export default function AIBuilder() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-1.5 sm:p-2 rounded-lg transition-colors hover:bg-white/10 text-gray-300"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">새 AI 만들기</h1>
-          <p className="text-gray-500">나만의 AI 도구를 만들어보세요</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">새 AI 만들기</h1>
+          <p className="text-sm sm:text-base text-gray-300">나만의 AI 도구를 만들어보세요</p>
         </div>
       </div>
 
       {/* Progress Steps */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 sm:mb-8 overflow-x-auto pb-2">
         {steps.map((s, index) => (
           <div
             key={s.id}
-            className="flex items-center"
+            className="flex items-center shrink-0"
           >
             <button
               onClick={() => setStep(s.id as typeof step)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors ${
                 step === s.id
-                  ? 'bg-primary-100 text-primary-700'
-                  : 'text-gray-500 hover:bg-gray-100'
+                  ? 'bg-primary-600/30 text-primary-400'
+                  : 'text-gray-300 hover:bg-white/10'
               }`}
             >
               <span
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs sm:text-sm ${
                   step === s.id
                     ? 'bg-primary-600 text-white'
-                    : 'bg-gray-200 text-gray-600'
+                    : 'bg-gray-700/50 text-gray-400'
                 }`}
               >
                 {index + 1}
               </span>
-              <span className="hidden sm:inline">{s.label}</span>
+              <span className="hidden sm:inline text-sm">{s.label}</span>
             </button>
             {index < steps.length - 1 && (
-              <div className="w-8 h-px bg-gray-200 mx-2" />
+              <div className="w-4 sm:w-8 h-px mx-1 sm:mx-2 bg-gray-700/30" />
             )}
           </div>
         ))}
       </div>
 
       {/* Content */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="rounded-xl border p-4 sm:p-6 bg-white/5 border-gray-700/20 backdrop-blur-sm">
         {step === 'basic' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2 text-gray-300">
                 아이콘
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {EMOJI_OPTIONS.map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
                     onClick={() => setValue('icon', emoji)}
-                    className={`w-12 h-12 rounded-lg text-2xl flex items-center justify-center transition-all ${
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg text-xl sm:text-2xl flex items-center justify-center transition-all ${
                       formData.icon === emoji
-                        ? 'bg-primary-100 ring-2 ring-primary-600'
-                        : 'bg-gray-100 hover:bg-gray-200'
+                        ? 'bg-primary-600/30 ring-2 ring-primary-500'
+                        : 'bg-white/5 hover:bg-white/10'
                     }`}
                   >
                     {emoji}
@@ -207,35 +224,35 @@ export default function AIBuilder() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2 text-gray-300">
                 이름 <span className="text-red-500">*</span>
               </label>
               <input
                 {...register('name', { required: '이름을 입력해주세요' })}
                 placeholder="예: 블로그 글 작성기"
-                className="input"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/5 border-gray-700/30 text-white placeholder-gray-400 backdrop-blur-sm text-sm sm:text-base"
               />
               {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+                <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.name.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2 text-gray-300">
                 설명
               </label>
               <textarea
                 {...register('description')}
                 placeholder="이 AI가 무엇을 하는지 간단히 설명해주세요"
                 rows={3}
-                className="input resize-none"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none bg-white/5 border-gray-700/30 text-white placeholder-gray-400 backdrop-blur-sm text-sm sm:text-base"
               />
             </div>
 
             <div className="flex justify-end">
               <button
                 onClick={() => setStep('fields')}
-                className="btn-primary"
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 다음
               </button>
@@ -244,19 +261,19 @@ export default function AIBuilder() {
         )}
 
         {step === 'fields' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <FieldEditor fields={inputFields} onChange={setInputFields} />
 
             <div className="flex justify-between">
               <button
                 onClick={() => setStep('basic')}
-                className="btn-secondary"
+                className="px-3 sm:px-4 py-2 rounded-lg transition-colors bg-white/5 border border-gray-700/30 text-gray-300 hover:bg-white/10 text-sm sm:text-base"
               >
                 이전
               </button>
               <button
                 onClick={() => setStep('personality')}
-                className="btn-primary"
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 다음
               </button>
@@ -265,7 +282,7 @@ export default function AIBuilder() {
         )}
 
         {step === 'personality' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <PersonalityEditor
               personality={personality}
               onChange={setPersonality}
@@ -274,13 +291,13 @@ export default function AIBuilder() {
             <div className="flex justify-between">
               <button
                 onClick={() => setStep('fields')}
-                className="btn-secondary"
+                className="px-3 sm:px-4 py-2 rounded-lg transition-colors bg-white/5 border border-gray-700/30 text-gray-300 hover:bg-white/10 text-sm sm:text-base"
               >
                 이전
               </button>
               <button
                 onClick={() => setStep('prompt')}
-                className="btn-primary"
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 다음
               </button>
@@ -289,7 +306,7 @@ export default function AIBuilder() {
         )}
 
         {step === 'prompt' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <PromptEditor
               systemPrompt={systemPrompt}
               onSystemPromptChange={setSystemPrompt}
@@ -301,13 +318,13 @@ export default function AIBuilder() {
             <div className="flex justify-between">
               <button
                 onClick={() => setStep('personality')}
-                className="btn-secondary"
+                className="px-3 sm:px-4 py-2 rounded-lg transition-colors bg-white/5 border border-gray-700/30 text-gray-300 hover:bg-white/10 text-sm sm:text-base"
               >
                 이전
               </button>
               <button
                 onClick={() => setStep('preview')}
-                className="btn-primary"
+                className="flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 미리보기
@@ -317,7 +334,7 @@ export default function AIBuilder() {
         )}
 
         {step === 'preview' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <BuilderPreview
               name={formData.name}
               description={formData.description}
@@ -329,14 +346,14 @@ export default function AIBuilder() {
             <div className="flex justify-between">
               <button
                 onClick={() => setStep('prompt')}
-                className="btn-secondary"
+                className="px-3 sm:px-4 py-2 rounded-lg transition-colors bg-white/5 border border-gray-700/30 text-gray-300 hover:bg-white/10 text-sm sm:text-base"
               >
                 이전
               </button>
               <button
                 onClick={handleSubmit(handleSave)}
                 disabled={isSubmitting}
-                className="btn-primary"
+                className="flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-600/50 text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 {isSubmitting ? (
                   <>
