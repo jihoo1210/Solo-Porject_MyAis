@@ -13,22 +13,22 @@ interface PaymentVerifyRequest {
 
 export const paymentApi = {
   createSubscription: async (plan: string): Promise<SubscriptionResponse> => {
-    const response = await apiClient.post<SubscriptionResponse>('/v1/payment/subscription', {
+    const response = await apiClient.post<SubscriptionResponse>('/payment/subscription', {
       plan,
     });
     return response.data;
   },
 
   verifyPayment: async (data: PaymentVerifyRequest): Promise<void> => {
-    await apiClient.post('/v1/payment/verify', data);
+    await apiClient.post('/payment/verify', data);
   },
 
   cancelSubscription: async (): Promise<void> => {
-    await apiClient.post('/v1/payment/cancel');
+    await apiClient.post('/payment/cancel');
   },
 
   getPaymentHistory: async (): Promise<unknown[]> => {
-    const response = await apiClient.get<unknown[]>('/v1/payment/history');
+    const response = await apiClient.get<unknown[]>('/payment/history');
     return response.data;
   },
 };

@@ -117,23 +117,21 @@ export const useHistoryStore = create<HistoryState>((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
 }));
 
-// UI Store
+// UI Store - Dark mode only
 interface UIState {
   sidebarOpen: boolean;
-  theme: 'light' | 'dark';
+  theme: 'dark';
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
-  setTheme: (theme: 'light' | 'dark') => void;
 }
 
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
       sidebarOpen: true,
-      theme: 'light',
+      theme: 'dark',
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
-      setTheme: (theme) => set({ theme }),
     }),
     {
       name: 'ui-storage',

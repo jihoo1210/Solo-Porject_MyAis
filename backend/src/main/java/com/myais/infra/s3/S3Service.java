@@ -12,10 +12,16 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,6 +42,7 @@ public class S3Service {
     private String region;
 
     private S3Client s3Client;
+    private S3Presigner s3Presigner;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
             "image/jpeg", "image/png", "image/gif", "image/webp"
@@ -45,10 +52,25 @@ public class S3Service {
     @PostConstruct
     public void init() {
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
+        StaticCredentialsProvider credentialsProvider = StaticCredentialsProvider.create(credentials);
+        Region awsRegion = Region.of(region);
+
         this.s3Client = S3Client.builder()
-                .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                .region(awsRegion)
+                .credentialsProvider(credentialsProvider)
                 .build();
+
+        this.s3Presigner = S3Presigner.builder()
+                .region(awsRegion)
+                .credentialsProvider(credentialsProvider)
+                .build();
+    }
+
+    @PreDestroy
+    public void destroy() {
+        if (s3Presigner != null) {
+            s3Presigner.close();
+        }
     }
 
     public String uploadImage(MultipartFile file) {
@@ -69,7 +91,8 @@ public class S3Service {
 
             s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-            return getFileUrl(key);
+            // Presigned URL 생성 (7일 유효)
+            return generatePresignedUrl(key);
         } catch (IOException e) {
             log.error("Failed to upload file to S3", e);
             throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
@@ -106,12 +129,39 @@ public class S3Service {
         }
     }
 
-    private String getFileUrl(String key) {
-        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, region, key);
+    /**
+     * Presigned URL 생성 (7일 유효)
+     */
+    public String generatePresignedUrl(String key) {
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .build();
+
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofDays(7))
+                .getObjectRequest(getObjectRequest)
+                .build();
+
+        PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
+        return presignedRequest.url().toString();
+    }
+
+    /**
+     * URL에서 key 추출 후 새 Presigned URL 생성
+     */
+    public String refreshPresignedUrl(String url) {
+        String key = extractKeyFromUrl(url);
+        return generatePresignedUrl(key);
     }
 
     private String extractKeyFromUrl(String url) {
-        String prefix = String.format("https://%s.s3.%s.amazonaws.com/", bucket, region);
-        return url.replace(prefix, "");
+        // Presigned URL 또는 일반 S3 URL에서 key 추출
+        String baseUrl = String.format("https://%s.s3.%s.amazonaws.com/", bucket, region);
+        if (url.contains("?")) {
+            // Presigned URL인 경우 쿼리 파라미터 제거
+            url = url.substring(0, url.indexOf("?"));
+        }
+        return url.replace(baseUrl, "");
     }
 }

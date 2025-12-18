@@ -43,6 +43,12 @@ public class Execution {
     @Builder.Default
     private Boolean isFavorite = false;
 
+    @Column(name = "execution_time")
+    private Long executionTime; // 밀리초 단위
+
+    @Column(name = "tokens_used")
+    private Integer tokensUsed;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

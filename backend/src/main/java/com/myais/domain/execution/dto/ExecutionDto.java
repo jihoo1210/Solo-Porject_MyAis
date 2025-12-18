@@ -56,6 +56,8 @@ public class ExecutionDto {
         private Map<String, Object> inputData;
         private String output;
         private Boolean isFavorite;
+        private Long executionTime; // 밀리초 단위
+        private Integer tokensUsed;
         private LocalDateTime createdAt;
 
         public static Response from(Execution execution) {
@@ -67,6 +69,8 @@ public class ExecutionDto {
                     .aiToolIcon(execution.getAiTool().getIcon())
                     .output(execution.getOutput())
                     .isFavorite(execution.getIsFavorite())
+                    .executionTime(execution.getExecutionTime())
+                    .tokensUsed(execution.getTokensUsed())
                     .createdAt(execution.getCreatedAt());
 
             try {
