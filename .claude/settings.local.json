@@ -8,7 +8,10 @@
       "Bash(./gradlew build:*)",
       "Bash(git checkout:*)",
       "Bash(git add:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nPhase 1: 프로젝트 셋업 완료\n\n- Spring Boot 3.5.0 백엔드 구축\n  - JWT 인증 시스템\n  - JPA 엔티티 \\(User, AITool, Execution, Favorite\\)\n  - OpenAI API 클라이언트\n  - AWS S3 업로드 서비스\n  - URL 크롤러 서비스\n  - TossPayments 결제 통합\n\n- React 18 + TypeScript 프론트엔드 구축\n  - TailwindCSS v4 스타일링\n  - Three.js + React Three Fiber 3D 파티클 애니메이션\n  - Zustand 상태 관리\n  - React Hook Form + Zod 유효성 검사\n  - 모든 페이지 및 컴포넌트 구현\n\n- 학습 문서 작성 \\(docs/Phase1_Learning.md\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(powershell:*)"
     ]
   }
 }

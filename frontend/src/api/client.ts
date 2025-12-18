@@ -23,9 +23,15 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - Handle errors
+// Response interceptor - Handle success and errors
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Unwrap ApiResponse wrapper - backend returns { success, data, message }
+    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
