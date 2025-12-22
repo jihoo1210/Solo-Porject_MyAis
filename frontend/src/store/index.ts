@@ -7,8 +7,10 @@ import { authApi } from '../api';
 interface AuthState {
   user: User | null;
   accessToken: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, accessToken: string) => void;
+  setAuth: (user: User, accessToken: string, refreshToken?: string) => void;
+  setTokens: (accessToken: string, refreshToken?: string) => void;
   setUser: (user: User) => void;
   logout: () => void;
   clearAuth: () => void;
@@ -20,19 +22,32 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       accessToken: null,
+      refreshToken: null,
       isAuthenticated: false,
-      setAuth: (user, accessToken) => {
+      setAuth: (user, accessToken, refreshToken) => {
         localStorage.setItem('accessToken', accessToken);
-        set({ user, accessToken, isAuthenticated: true });
+        if (refreshToken) {
+          localStorage.setItem('refreshToken', refreshToken);
+        }
+        set({ user, accessToken, refreshToken: refreshToken || get().refreshToken, isAuthenticated: true });
+      },
+      setTokens: (accessToken, refreshToken) => {
+        localStorage.setItem('accessToken', accessToken);
+        if (refreshToken) {
+          localStorage.setItem('refreshToken', refreshToken);
+        }
+        set({ accessToken, refreshToken: refreshToken || get().refreshToken });
       },
       setUser: (user) => set({ user }),
       logout: () => {
         localStorage.removeItem('accessToken');
-        set({ user: null, accessToken: null, isAuthenticated: false });
+        localStorage.removeItem('refreshToken');
+        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
       },
       clearAuth: () => {
         localStorage.removeItem('accessToken');
-        set({ user: null, accessToken: null, isAuthenticated: false });
+        localStorage.removeItem('refreshToken');
+        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
       },
       refreshUser: async () => {
         try {

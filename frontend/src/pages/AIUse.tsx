@@ -27,14 +27,22 @@ export default function AIUse() {
   const isFreeTier = !user?.subscription || user.subscription === 'FREE';
   const hasReachedDailyLimit = isFreeTier && (user?.dailyUsageCount ?? 0) >= FREE_DAILY_LIMIT;
 
+  // 이메일 인증 필요 여부 (SNS 로그인 제외)
+  const needsEmailVerification = user && !user.emailVerified && !user.provider;
+
   useEffect(() => {
+    // 이메일 미인증 시 대시보드로 리다이렉트
+    if (needsEmailVerification) {
+      navigate('/dashboard');
+      return;
+    }
     if (id) {
       fetchTool();
     }
     return () => {
       abortControllerRef.current?.abort();
     };
-  }, [id]);
+  }, [id, needsEmailVerification, navigate]);
 
   const fetchTool = async () => {
     try {

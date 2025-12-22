@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Loader2, Crown } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { AITool, InputField, OutputConfig, AIPersonality } from '../types';
 import { aiToolsApi } from '../api';
+import { useAuthStore } from '../store';
 import FieldEditor from '../components/builder/FieldEditor';
 import PersonalityEditor from '../components/builder/PersonalityEditor';
 import PromptEditor from '../components/builder/PromptEditor';
@@ -12,13 +13,23 @@ interface FormData {
   name: string;
   description: string;
   icon: string;
+  aiModel: string;
 }
+
+const AI_MODELS = [
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini Flash Lite', description: '빠르고 가벼운 모델', proRequired: false },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: '가격-성능 최적화 모델', proRequired: true },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '고급 추론 모델', proRequired: true },
+  { id: 'gemini-3-flash-preview', name: 'Nano Banana', description: '최신 Gemini 3 Flash (Preview)', proRequired: true },
+];
 
 const EMOJI_OPTIONS = ['🐶', '🐱', '🐰', '🦊', '🐻', '🐼', '🐨', '🦁', '🐯', '🐸', '🐧', '🦄'];
 
 export default function AIEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isPro = user?.subscription === 'PRO' || user?.subscription === 'PREMIUM';
   const [tool, setTool] = useState<AITool | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,11 +59,19 @@ export default function AIEdit() {
 
   const formData = watch();
 
+  // 이메일 인증 필요 여부 (SNS 로그인 제외)
+  const needsEmailVerification = user && !user.emailVerified && !user.provider;
+
   useEffect(() => {
+    // 이메일 미인증 시 대시보드로 리다이렉트
+    if (needsEmailVerification) {
+      navigate('/dashboard');
+      return;
+    }
     if (id) {
       fetchTool();
     }
-  }, [id]);
+  }, [id, needsEmailVerification, navigate]);
 
   const fetchTool = async () => {
     try {
@@ -62,6 +81,7 @@ export default function AIEdit() {
       setValue('name', data.name);
       setValue('description', data.description || '');
       setValue('icon', data.icon);
+      setValue('aiModel', data.aiModel || 'gemini-2.5-flash-lite');
       // 기존 필드에 id가 없으면 부여
       const fieldsWithIds = (data.inputFields || []).map((field, index) => ({
         ...field,
@@ -87,6 +107,7 @@ export default function AIEdit() {
         name: formData.name,
         description: formData.description,
         icon: formData.icon,
+        aiModel: formData.aiModel,
         inputFields,
         outputConfig,
         systemPrompt,  // buildSystemPrompt() 대신 순수 systemPrompt만 저장
@@ -257,6 +278,41 @@ export default function AIEdit() {
                 rows={3}
                 className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none bg-white/5 border-gray-700/30 text-white placeholder-gray-400 backdrop-blur-sm text-sm sm:text-base"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-300">
+                AI 모델
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                {AI_MODELS.map((model) => {
+                  const isDisabled = model.proRequired && !isPro;
+                  return (
+                    <button
+                      key={model.id}
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => setValue('aiModel', model.id)}
+                      className={`relative p-3 sm:p-4 rounded-lg border text-left transition-all ${
+                        formData.aiModel === model.id
+                          ? 'bg-primary-600/20 border-primary-500 ring-2 ring-primary-500/50'
+                          : isDisabled
+                            ? 'bg-gray-800/50 border-gray-700/30 opacity-60 cursor-not-allowed'
+                            : 'bg-white/5 border-gray-700/30 hover:bg-white/10'
+                      }`}
+                    >
+                      {model.proRequired && (
+                        <Crown className={`absolute top-2 right-2 w-4 h-4 ${isPro ? 'text-yellow-400' : 'text-gray-500'}`} />
+                      )}
+                      <div className="font-medium text-white text-sm sm:text-base">{model.name}</div>
+                      <div className="text-xs sm:text-sm text-gray-400 mt-0.5">{model.description}</div>
+                      {isDisabled && (
+                        <div className="text-xs text-yellow-500 mt-1">Pro 구독 필요</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

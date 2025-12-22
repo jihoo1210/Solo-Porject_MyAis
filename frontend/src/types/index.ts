@@ -4,6 +4,8 @@ export interface User {
   email: string;
   name: string;
   avatarUrl?: string;
+  provider?: string; // null = 일반 로그인, 'google'|'kakao' 등 = SNS 로그인
+  emailVerified?: boolean;
   subscription?: 'FREE' | 'PRO';
   subscriptionExpiresAt?: string;
   dailyUsageCount?: number;

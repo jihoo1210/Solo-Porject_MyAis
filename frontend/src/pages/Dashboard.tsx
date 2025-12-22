@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Star, Clock, Search, Grid, List, FolderOpen, Sparkles, Crown, Zap } from 'lucide-react';
+import { Plus, Star, Clock, Search, Grid, List, FolderOpen, Sparkles, Crown, Zap, AlertTriangle } from 'lucide-react';
 import { useAuthStore, useAIToolsStore } from '../store';
-import { aiToolsApi, historyApi } from '../api';
+import { aiToolsApi, historyApi, authApi } from '../api';
 import AICard from '../components/ai/AICard';
 import { Execution } from '../types';
 
@@ -19,6 +19,8 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState(
     searchParams.get('search') || ''
   );
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -66,8 +68,61 @@ export default function Dashboard() {
   const isFreeTier = !user?.subscription || user.subscription === 'FREE';
   const hasReachedLimit = isFreeTier && myTools.length >= FREE_AI_LIMIT;
 
+  // 이메일 인증 필요 여부 (SNS 로그인 제외)
+  const needsEmailVerification = user && !user.emailVerified && !user.provider;
+
+  const handleResendVerification = async () => {
+    if (!user?.email || isResendingEmail) return;
+
+    setIsResendingEmail(true);
+    try {
+      await authApi.resendVerification(user.email);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 5000);
+    } catch (error) {
+      console.error('Failed to resend verification email:', error);
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      {/* Email Verification Banner - 닫을 수 없음 */}
+      {needsEmailVerification && (
+        <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-yellow-300">이메일 인증이 필요합니다</p>
+              <p className="text-sm text-yellow-200/70 mt-1">
+                이메일 인증을 완료해야 AI 도구를 사용할 수 있습니다.
+              </p>
+              <p className="text-sm text-yellow-200/70 mt-2">
+                {user?.email}로 발송된 인증 메일을 확인해주세요.
+                {resendSuccess ? (
+                  <span className="text-green-400 ml-2">인증 메일이 재발송되었습니다!</span>
+                ) : (
+                  <>
+                    {' '}메일이 오지 않았나요?{' '}
+                    <button
+                      onClick={handleResendVerification}
+                      disabled={isResendingEmail}
+                      className="text-yellow-400 hover:text-yellow-300 underline disabled:opacity-50"
+                    >
+                      {isResendingEmail ? '발송 중...' : '인증 메일 재발송'}
+                    </button>
+                  </>
+                )}
+              </p>
+              <p className="text-xs text-yellow-300/80 mt-2">
+                인증을 완료한 후 페이지를 새로고침 해주세요.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Welcome + Usage Stats */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
@@ -198,7 +253,20 @@ export default function Dashboard() {
               ))}
 
               {/* Create New Card or Upgrade Button */}
-              {hasReachedLimit ? (
+              {needsEmailVerification ? (
+                <div
+                  className={`border-2 border-dashed rounded-xl flex items-center justify-center transition-all border-gray-600/30 bg-gray-800/30 cursor-not-allowed ${
+                    viewMode === 'grid' ? 'p-6 sm:p-8' : 'p-3 sm:p-4'
+                  }`}
+                  title="이메일 인증이 필요합니다"
+                >
+                  <div className="text-center opacity-50">
+                    <Plus className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-gray-500" />
+                    <p className="font-medium text-gray-400 text-sm sm:text-base">새 AI 만들기</p>
+                    <p className="text-xs sm:text-sm text-gray-500">이메일 인증 필요</p>
+                  </div>
+                </div>
+              ) : hasReachedLimit ? (
                 <Link
                   to="/payment"
                   className={`border-2 border-dashed rounded-xl flex items-center justify-center transition-all border-yellow-500/30 hover:border-yellow-500 hover:bg-yellow-500/10 ${

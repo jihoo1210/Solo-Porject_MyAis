@@ -34,6 +34,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
 
   const {
@@ -52,7 +53,8 @@ export default function Signup() {
         password: data.password,
         name: data.name,
       });
-      setAuth(response.user, response.accessToken);
+      setAuth(response.user, response.accessToken, response.refreshToken);
+      // 회원가입 성공 후 대시보드로 이동 (이메일 인증 안내 배너가 표시됨)
       navigate('/dashboard');
     } catch (err: any) {
       setError(
@@ -179,12 +181,25 @@ export default function Signup() {
           <label className="block text-sm font-medium text-gray-300 mb-1">
             비밀번호 확인
           </label>
-          <input
-            type="password"
-            {...register('confirmPassword')}
-            className="w-full px-4 py-3 bg-white/5 border border-gray-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent backdrop-blur-sm"
-            placeholder="••••••••"
-          />
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              {...register('confirmPassword')}
+              className="w-full px-4 py-3 bg-white/5 border border-gray-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-10 backdrop-blur-sm"
+              placeholder="비밀번호를 다시 입력하세요"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+            >
+              {showConfirmPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
+          </div>
           {errors.confirmPassword && (
             <p className="mt-1 text-sm text-red-400">
               {errors.confirmPassword.message}

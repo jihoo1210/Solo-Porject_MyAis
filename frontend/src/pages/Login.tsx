@@ -32,7 +32,7 @@ export default function Login() {
     try {
       setError('');
       const response = await authApi.login(data);
-      setAuth(response.user, response.accessToken);
+      setAuth(response.user, response.accessToken, response.refreshToken);
       navigate('/dashboard');
     } catch (err: any) {
       setError(
@@ -121,7 +121,7 @@ export default function Login() {
               type={showPassword ? 'text' : 'password'}
               {...register('password')}
               className="w-full px-4 py-3 bg-white/5 border border-gray-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-10 backdrop-blur-sm"
-              placeholder="••••••••"
+              placeholder="영문 + 숫자 8자 이상"
             />
             <button
               type="button"
@@ -150,14 +150,24 @@ export default function Login() {
         </button>
       </form>
 
-      <div className="mt-6 text-center text-sm text-gray-300">
-        아직 계정이 없으신가요?{' '}
-        <Link
-          to="/signup"
-          className="text-primary-400 hover:text-primary-300 font-medium"
-        >
-          회원가입
-        </Link>
+      <div className="mt-6 space-y-3 text-center text-sm text-gray-300">
+        <div>
+          <Link
+            to="/forgot-password"
+            className="text-gray-400 hover:text-gray-300"
+          >
+            비밀번호를 잊으셨나요?
+          </Link>
+        </div>
+        <div>
+          아직 계정이 없으신가요?{' '}
+          <Link
+            to="/signup"
+            className="text-primary-400 hover:text-primary-300 font-medium"
+          >
+            회원가입
+          </Link>
+        </div>
       </div>
     </div>
   );

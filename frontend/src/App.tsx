@@ -10,6 +10,10 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import OAuthCallback from './pages/OAuthCallback';
+import VerifyEmail from './pages/VerifyEmail';
+import ResendVerification from './pages/ResendVerification';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import AIUse from './pages/AIUse';
 import AIBuilder from './pages/AIBuilder';
@@ -19,6 +23,7 @@ import HistoryDetail from './pages/HistoryDetail';
 import Payment from './pages/Payment';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFail from './pages/PaymentFail';
+import BillingCallback from './pages/BillingCallback';
 import Settings from './pages/Settings';
 
 // Protected Route Component
@@ -50,6 +55,10 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/resend-verification" element={<ResendVerification />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Auth Routes */}
         <Route element={<AuthLayout />}>
@@ -88,6 +97,8 @@ function App() {
           <Route path="/payment" element={<Payment />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/fail" element={<PaymentFail />} />
+          <Route path="/payment/billing-success" element={<BillingCallback type="success" />} />
+          <Route path="/payment/billing-fail" element={<BillingCallback type="fail" />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
 
