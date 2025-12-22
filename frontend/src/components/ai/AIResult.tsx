@@ -139,9 +139,24 @@ function parseMarkdown(text: string): string {
 
   let result = text;
 
-  // 코드 블록 처리 (```로 감싸진 부분)
+  // 줄바꿈 정규화 (Windows \r\n -> \n)
+  result = result.replace(/\r\n/g, '\n');
+  result = result.replace(/\r/g, '\n');
+
+  // 코드 블록 임시 치환 (다른 처리에서 건드리지 않도록)
+  const codeBlocks: string[] = [];
   result = result.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-    return `<pre class="${codeBlockClass}"><code>${escapeHtml(code.trim())}</code></pre>`;
+    const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+    codeBlocks.push(`<pre class="${codeBlockClass}"><code>${escapeHtml(code.trim())}</code></pre>`);
+    return placeholder;
+  });
+
+  // 인라인 코드 임시 치환
+  const inlineCodes: string[] = [];
+  result = result.replace(/`([^`]+)`/g, (_, code) => {
+    const placeholder = `__INLINE_CODE_${inlineCodes.length}__`;
+    inlineCodes.push(`<code class="${inlineCodeClass}">${escapeHtml(code)}</code>`);
+    return placeholder;
   });
 
   // 헤더 처리
@@ -150,24 +165,27 @@ function parseMarkdown(text: string): string {
   result = result.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-5 mb-3 text-white">$1</h2>');
   result = result.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-5 mb-3 text-white">$1</h1>');
 
-  // 굵은 글씨 (**text**)
-  result = result.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
-
-  // 기울임 (*text*)
-  result = result.replace(/\*(.*?)\*/g, '<em class="italic text-gray-200">$1</em>');
-
-  // 인라인 코드 (`code`)
-  result = result.replace(/`([^`]+)`/g, `<code class="${inlineCodeClass}">$1</code>`);
-
-  // 순서 없는 리스트 (- item 또는 * item)
-  result = result.replace(/^[\-\*] (.*)$/gim, '<li class="ml-4 list-disc text-gray-200">$1</li>');
+  // 순서 없는 리스트 (- item 또는 * item) - 굵은 글씨/기울임보다 먼저 처리
+  // 줄 시작 + 선택적 공백(들여쓰기) + * 또는 - + 하나 이상의 공백 + 텍스트
+  result = result.replace(/(^|\n)\s*[*\-•·]\s+(.+)/gm, (_, prefix, content) => {
+    return `${prefix}<li class="ml-4 list-disc text-gray-200">${content}</li>`;
+  });
 
   // 순서 있는 리스트 (1. item)
-  result = result.replace(/^\d+\. (.*)$/gim, '<li class="ml-4 list-decimal text-gray-200">$1</li>');
+  result = result.replace(/(^|\n)\d+\. (.+)/gm, (_, prefix, content) =>
+    `${prefix}<li class="ml-4 list-decimal text-gray-200">${content}</li>`
+  );
+
+  // 굵은 글씨 (**text**) - 반드시 기울임보다 먼저 처리
+  result = result.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
+
+  // 기울임 (*text*) - 인라인에서만 적용
+  // 앞에 공백이나 태그가 있고, 뒤에 공백/태그/구두점이 있는 경우만 매칭
+  result = result.replace(/(?<=[\s>])\*([^*\n]+)\*(?=[\s<.,!?;:]|$)/g, '<em class="italic text-gray-200">$1</em>');
 
   // 연속된 li 태그를 ul/ol로 감싸기
-  result = result.replace(/(<li class="ml-4 list-disc[^>]*>.*?<\/li>\n?)+/g, '<ul class="my-2 space-y-1">$&</ul>');
-  result = result.replace(/(<li class="ml-4 list-decimal[^>]*>.*?<\/li>\n?)+/g, '<ol class="my-2 space-y-1">$&</ol>');
+  result = result.replace(/(<li class="ml-4 list-disc[^>]*>.*?<\/li>(\n|<br \/>)?)+/g, '<ul class="my-2 space-y-1 list-disc list-inside">$&</ul>');
+  result = result.replace(/(<li class="ml-4 list-decimal[^>]*>.*?<\/li>(\n|<br \/>)?)+/g, '<ol class="my-2 space-y-1 list-decimal list-inside">$&</ol>');
 
   // 링크 [text](url)
   result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-400 hover:underline" target="_blank" rel="noopener">$1</a>');
@@ -175,8 +193,18 @@ function parseMarkdown(text: string): string {
   // 수평선
   result = result.replace(/^---$/gim, '<hr class="my-4 border-gray-700" />');
 
-  // 줄바꿈 처리 (pre 태그 내부 제외)
+  // 줄바꿈 처리
   result = result.replace(/\n/g, '<br />');
+
+  // 코드 블록 복원
+  codeBlocks.forEach((block, i) => {
+    result = result.replace(`__CODE_BLOCK_${i}__`, block);
+  });
+
+  // 인라인 코드 복원
+  inlineCodes.forEach((code, i) => {
+    result = result.replace(`__INLINE_CODE_${i}__`, code);
+  });
 
   // pre 태그 내의 <br /> 제거
   result = result.replace(/<pre([^>]*)>([\s\S]*?)<\/pre>/g, (match, attrs, content) => {

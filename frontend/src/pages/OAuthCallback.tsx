@@ -12,6 +12,7 @@ export default function OAuthCallback() {
 
   useEffect(() => {
     const token = searchParams.get('token');
+    const refreshToken = searchParams.get('refreshToken');
     const errorParam = searchParams.get('error');
 
     if (errorParam) {
@@ -53,7 +54,7 @@ export default function OAuthCallback() {
           subscription: userData.subscription || 'FREE',
           createdAt: userData.createdAt || new Date().toISOString(),
           updatedAt: userData.updatedAt || new Date().toISOString(),
-        }, token);
+        }, token, refreshToken || undefined);
 
         navigate('/dashboard');
       } catch {

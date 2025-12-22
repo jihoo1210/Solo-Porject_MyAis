@@ -11,9 +11,24 @@ function parseMarkdown(text: string): string {
 
   let result = text;
 
-  // 코드 블록 처리
+  // 줄바꿈 정규화 (Windows \r\n -> \n)
+  result = result.replace(/\r\n/g, '\n');
+  result = result.replace(/\r/g, '\n');
+
+  // 코드 블록 임시 치환 (다른 처리에서 건드리지 않도록)
+  const codeBlocks: string[] = [];
   result = result.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-    return `<pre class="${codeBlockClass}"><code>${escapeHtml(code.trim())}</code></pre>`;
+    const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+    codeBlocks.push(`<pre class="${codeBlockClass}"><code>${escapeHtml(code.trim())}</code></pre>`);
+    return placeholder;
+  });
+
+  // 인라인 코드 임시 치환
+  const inlineCodes: string[] = [];
+  result = result.replace(/`([^`]+)`/g, (_, code) => {
+    const placeholder = `__INLINE_CODE_${inlineCodes.length}__`;
+    inlineCodes.push(`<code class="${inlineCodeClass}">${escapeHtml(code)}</code>`);
+    return placeholder;
   });
 
   // 헤더 처리
@@ -22,29 +37,46 @@ function parseMarkdown(text: string): string {
   result = result.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-5 mb-3 text-white">$1</h2>');
   result = result.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-5 mb-3 text-white">$1</h1>');
 
-  // 굵은 글씨
-  result = result.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
+  // 순서 없는 리스트 (- item 또는 * item) - 굵은 글씨/기울임보다 먼저 처리
+  // 줄 시작 + 선택적 공백(들여쓰기) + * 또는 - + 하나 이상의 공백 + 텍스트
+  result = result.replace(/(^|\n)\s*[*\-•·]\s+(.+)/gm, (_, prefix, content) => {
+    return `${prefix}<li class="ml-4 list-disc text-gray-200">${content}</li>`;
+  });
 
-  // 기울임
-  result = result.replace(/\*(.*?)\*/g, '<em class="italic text-gray-200">$1</em>');
+  // 순서 있는 리스트 (1. item)
+  result = result.replace(/(^|\n)\d+\. (.+)/gm, (_, prefix, content) =>
+    `${prefix}<li class="ml-4 list-decimal text-gray-200">${content}</li>`
+  );
 
-  // 인라인 코드
-  result = result.replace(/`([^`]+)`/g, `<code class="${inlineCodeClass}">$1</code>`);
+  // 굵은 글씨 (**text**) - 반드시 기울임보다 먼저 처리
+  result = result.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
 
-  // 순서 없는 리스트
-  result = result.replace(/^[-*] (.*)$/gim, '<li class="ml-4 list-disc text-gray-200">$1</li>');
+  // 기울임 (*text*) - 인라인에서만 적용
+  // 앞에 공백이나 태그가 있고, 뒤에 공백/태그/구두점이 있는 경우만 매칭
+  result = result.replace(/(?<=[\s>])\*([^*\n]+)\*(?=[\s<.,!?;:]|$)/g, '<em class="italic text-gray-200">$1</em>');
 
-  // 순서 있는 리스트
-  result = result.replace(/^\d+\. (.*)$/gim, '<li class="ml-4 list-decimal text-gray-200">$1</li>');
+  // 연속된 li 태그를 ul/ol로 감싸기
+  result = result.replace(/(<li class="ml-4 list-disc[^>]*>.*?<\/li>(\n|<br \/>)?)+/g, '<ul class="my-2 space-y-1 list-disc list-inside">$&</ul>');
+  result = result.replace(/(<li class="ml-4 list-decimal[^>]*>.*?<\/li>(\n|<br \/>)?)+/g, '<ol class="my-2 space-y-1 list-decimal list-inside">$&</ol>');
 
-  // 링크
+  // 링크 [text](url)
   result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-400 hover:underline" target="_blank" rel="noopener">$1</a>');
 
   // 수평선
   result = result.replace(/^---$/gim, '<hr class="my-4 border-gray-700" />');
 
-  // 줄바꿈
+  // 줄바꿈 처리
   result = result.replace(/\n/g, '<br />');
+
+  // 코드 블록 복원
+  codeBlocks.forEach((block, i) => {
+    result = result.replace(`__CODE_BLOCK_${i}__`, block);
+  });
+
+  // 인라인 코드 복원
+  inlineCodes.forEach((code, i) => {
+    result = result.replace(`__INLINE_CODE_${i}__`, code);
+  });
 
   // pre 태그 내의 <br /> 제거
   result = result.replace(/<pre([^>]*)>([\s\S]*?)<\/pre>/g, (match, attrs, content) => {
@@ -61,6 +93,20 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// S3 또는 이미지 URL인지 확인
+function isImageUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+
+  // S3 URL 패턴 확인 (amazonaws.com 또는 cloudfront)
+  const isS3Url = url.includes('amazonaws.com') || url.includes('cloudfront.net');
+
+  // 일반 이미지 확장자 확인 (쿼리 파라미터 무시)
+  const urlWithoutQuery = url.split('?')[0];
+  const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(urlWithoutQuery);
+
+  return isS3Url || hasImageExtension;
 }
 
 export default function HistoryDetail() {
@@ -244,12 +290,29 @@ export default function HistoryDetail() {
                         </label>
                         <div className="bg-gray-900/50 rounded-lg p-2.5 sm:p-3 text-gray-200 border border-gray-700/30 text-sm">
                           {typeof value === 'string' && value.startsWith('http') ? (
-                            value.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                              <img
-                                src={value}
-                                alt={key}
-                                className="max-h-32 sm:max-h-40 rounded"
-                              />
+                            isImageUrl(value) ? (
+                              <a
+                                href={value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block cursor-pointer"
+                              >
+                                <img
+                                  src={value}
+                                  alt={key}
+                                  className="max-h-48 sm:max-h-64 rounded object-contain mx-auto block hover:opacity-90 transition-opacity"
+                                  onError={(e) => {
+                                    // 이미지 로드 실패 시 URL 링크로 표시
+                                    const target = e.target as HTMLImageElement;
+                                    const parent = target.parentNode as HTMLAnchorElement;
+                                    target.style.display = 'none';
+                                    const span = document.createElement('span');
+                                    span.className = 'text-primary-400 hover:underline break-all';
+                                    span.textContent = value;
+                                    parent.appendChild(span);
+                                  }}
+                                />
+                              </a>
                             ) : (
                               <a
                                 href={value}

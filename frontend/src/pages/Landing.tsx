@@ -30,11 +30,13 @@ const pricingPlans = [
     price: '₩0',
     period: '',
     features: [
-      'AI 3개 생성',
+      'AI 도구 3개 생성',
       '일 20회 실행',
-      'GPT-4o-mini',
-      '7일 히스토리',
+      'Gemini 2.5 Flash Lite 모델',
+      '이미지 분석 기능',
+      'URL 크롤링',
     ],
+    limitations: ['고급 모델 사용 불가'],
     cta: '시작하기',
     ctaLink: '/signup',
     popular: false,
@@ -44,13 +46,15 @@ const pricingPlans = [
     price: '₩9,900',
     period: '/월',
     features: [
-      '무제한 AI 생성',
+      'AI 도구 무제한 생성',
       '무제한 실행',
-      'GPT-4o 사용 가능',
-      '이미지 분석',
-      '무제한 히스토리',
-      '우선 처리',
+      'Gemini 2.5 Flash 모델',
+      'Gemini 2.5 Pro 사용 가능',
+      'Nano Banana (Gemini 3 Preview)',
+      '이미지 분석 기능',
+      'URL 크롤링',
     ],
+    limitations: [],
     cta: '구독하기',
     ctaLink: '/signup',
     popular: true,
@@ -245,6 +249,12 @@ export default function Landing() {
                     <li key={i} className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base">
                       <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 shrink-0" />
                       <span>{feature}</span>
+                    </li>
+                  ))}
+                  {plan.limitations.map((limitation, i) => (
+                    <li key={`limit-${i}`} className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-gray-400">
+                      <span className="w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center shrink-0">×</span>
+                      <span>{limitation}</span>
                     </li>
                   ))}
                 </ul>

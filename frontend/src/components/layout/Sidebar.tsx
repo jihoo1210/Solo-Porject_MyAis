@@ -9,8 +9,15 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const { sidebarOpen } = useUIStore();
+  const { sidebarOpen, setSidebarOpen } = useUIStore();
   const { favorites, tools } = useAIToolsStore();
+
+  // 모바일에서 네비게이션 클릭 시 사이드바 닫기
+  const handleNavClick = () => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
 
   const favoriteTools = tools.filter((tool) => favorites.includes(tool.id));
 
@@ -25,6 +32,7 @@ export default function Sidebar() {
             <NavLink
               key={item.to}
               to={item.to}
+              onClick={handleNavClick}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
@@ -52,6 +60,7 @@ export default function Sidebar() {
                 <NavLink
                   key={tool.id}
                   to={`/ai/${tool.id}`}
+                  onClick={handleNavClick}
                   className={({ isActive }) =>
                     cn(
                       'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
@@ -73,6 +82,7 @@ export default function Sidebar() {
         <div className="mt-6 pt-6 border-t border-gray-700/20">
           <NavLink
             to="/ai/new"
+            onClick={handleNavClick}
             className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-primary-300 hover:bg-primary-600/20 hover:text-primary-200"
           >
             <Plus className="w-5 h-5" />
@@ -81,6 +91,7 @@ export default function Sidebar() {
 
           <NavLink
             to="/settings"
+            onClick={handleNavClick}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
