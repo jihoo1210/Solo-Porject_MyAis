@@ -51,6 +51,10 @@ public class AITool {
     @Column(name = "output_config", columnDefinition = "TEXT")
     private String outputConfig;
 
+    @Column(name = "ai_model", length = 50)
+    @Builder.Default
+    private String aiModel = "gemini-2.5-flash-lite";
+
     @Column(name = "is_public")
     @Builder.Default
     private Boolean isPublic = false;

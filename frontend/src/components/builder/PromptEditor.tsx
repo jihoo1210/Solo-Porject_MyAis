@@ -133,6 +133,14 @@ export default function PromptEditor({
     document.execCommand('insertText', false, text);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Enter 키로 줄바꿈 허용 (기본 동작 유지)
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      document.execCommand('insertLineBreak');
+    }
+  };
+
   const insertVariable = (fieldName: string) => {
     const variable = `{{${fieldName}}}`;
     const selection = window.getSelection();
@@ -186,6 +194,7 @@ export default function PromptEditor({
           ref={editorRef}
           contentEditable
           onInput={handleInput}
+          onKeyDown={handleKeyDown}
           onCompositionStart={handleCompositionStart}
           onCompositionEnd={handleCompositionEnd}
           onPaste={handlePaste}

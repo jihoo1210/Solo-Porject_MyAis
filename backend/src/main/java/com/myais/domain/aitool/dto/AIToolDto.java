@@ -31,6 +31,7 @@ public class AIToolDto {
         private List<InputField> inputFields;
         private OutputConfig outputConfig;
         private AdvancedSettings advancedSettings;
+        private String aiModel;
         private Boolean isPublic;
         private Boolean isDefault;
         private Integer usageCount;
@@ -46,6 +47,7 @@ public class AIToolDto {
                     .icon(aiTool.getIcon())
                     .category(aiTool.getCategory())
                     .systemPrompt(aiTool.getSystemPrompt())
+                    .aiModel(aiTool.getAiModel())
                     .isPublic(aiTool.getIsPublic())
                     .isDefault(aiTool.getIsDefault())
                     .usageCount(aiTool.getUsageCount())
@@ -92,6 +94,7 @@ public class AIToolDto {
         private List<InputField> inputFields;
         private OutputConfig outputConfig;
         private AdvancedSettings advancedSettings;
+        private String aiModel = "gemini-2.5-flash-lite";
         private Boolean isPublic = false;
     }
 
@@ -109,6 +112,7 @@ public class AIToolDto {
         private List<InputField> inputFields;
         private OutputConfig outputConfig;
         private AdvancedSettings advancedSettings;
+        private String aiModel;
         private Boolean isPublic;
     }
 
@@ -146,7 +150,7 @@ public class AIToolDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class AdvancedSettings {
-        private String model = "gpt-4o-mini";
+        private String model = "gemini-2.5-flash-lite";
         private Double temperature = 0.7;
         private Integer maxTokens = 2048;
     }

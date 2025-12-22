@@ -1,5 +1,5 @@
 import { useForm } from 'react-hook-form';
-import { Upload, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { Upload, Link as LinkIcon, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { InputField } from '../../types';
 import { utilsApi } from '../../api';
@@ -17,6 +17,8 @@ export default function AIForm({ fields, onSubmit, isLoading, disabled = false }
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm();
   const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [crawlingField, setCrawlingField] = useState<string | null>(null);
+  const [crawledContent, setCrawledContent] = useState<Record<string, string>>({});
+  const [expandedCrawl, setExpandedCrawl] = useState<Record<string, boolean>>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const handleFileUpload = async (fieldName: string, file: File) => {
@@ -24,7 +26,8 @@ export default function AIForm({ fields, onSubmit, isLoading, disabled = false }
     try {
       // 이전 이미지가 있으면 S3에서 삭제
       const previousUrl = watch(fieldName);
-      if (previousUrl && typeof previousUrl === 'string' && previousUrl.includes('s3.')) {
+      if (previousUrl && typeof previousUrl === 'string' &&
+          (previousUrl.includes('amazonaws.com') || previousUrl.includes('s3.'))) {
         try {
           await utilsApi.deleteImage(previousUrl);
         } catch (deleteError) {
@@ -46,12 +49,26 @@ export default function AIForm({ fields, onSubmit, isLoading, disabled = false }
     setCrawlingField(fieldName);
     try {
       const response = await utilsApi.crawlUrl(url);
-      setValue(fieldName, response.content);
+      // 크롤링된 내용은 미리보기용으로 저장
+      setCrawledContent(prev => ({ ...prev, [fieldName]: response.content }));
+      setExpandedCrawl(prev => ({ ...prev, [fieldName]: false }));
+      // 실제 전송되는 값은 URL로 유지 (백엔드에서 크롤링)
+      setValue(fieldName, url);
     } catch (error) {
       console.error('Crawl failed:', error);
     } finally {
       setCrawlingField(null);
     }
+  };
+
+  const handleClearCrawl = (fieldName: string) => {
+    setCrawledContent(prev => {
+      const newContent = { ...prev };
+      delete newContent[fieldName];
+      return newContent;
+    });
+    setValue(fieldName, '');
+    setValue(`${fieldName}_url`, '');
   };
 
   const inputStyles = `w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm sm:text-base ${
@@ -149,17 +166,23 @@ export default function AIForm({ fields, onSubmit, isLoading, disabled = false }
             <div className="flex gap-2">
               <input
                 type="url"
-                {...register(field.name, { required: field.required })}
+                {...register(`${field.name}_url`, { required: field.required && !crawledContent[field.name] })}
                 placeholder="https://example.com"
                 className={`${inputStyles} flex-1`}
+                disabled={!!crawledContent[field.name]}
               />
+              <input type="hidden" {...register(field.name)} />
               <button
                 type="button"
-                onClick={() => fieldValue && handleUrlCrawl(field.name, fieldValue)}
-                disabled={!fieldValue || crawlingField === field.name}
-                className={`px-3 sm:px-4 rounded-lg transition-colors ${
+                onClick={() => {
+                  const urlValue = watch(`${field.name}_url`);
+                  if (urlValue) handleUrlCrawl(field.name, urlValue);
+                }}
+                disabled={!watch(`${field.name}_url`) || crawlingField === field.name || !!crawledContent[field.name]}
+                title="웹사이트 크롤링"
+                className={`px-3 sm:px-4 rounded-lg transition-colors group relative ${
                   theme === 'dark'
-                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 disabled:bg-gray-800/50'
+                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:text-gray-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100/50'
                 }`}
               >
@@ -168,8 +191,58 @@ export default function AIForm({ fields, onSubmit, isLoading, disabled = false }
                 ) : (
                   <LinkIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
+                <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                  웹사이트 크롤링
+                </span>
               </button>
             </div>
+
+            {/* 크롤링된 내용 표시 */}
+            {crawledContent[field.name] && (
+              <div className={`rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center justify-between p-2 sm:p-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs sm:text-sm font-medium ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`}>
+                      ✓ 크롤링 완료
+                    </span>
+                    <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      ({crawledContent[field.name].length.toLocaleString()}자)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedCrawl(prev => ({ ...prev, [field.name]: !prev[field.name] }))}
+                      className={`p-1 rounded transition-colors ${theme === 'dark' ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'}`}
+                      title={expandedCrawl[field.name] ? '접기' : '펼치기'}
+                    >
+                      {expandedCrawl[field.name] ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleClearCrawl(field.name)}
+                      className={`p-1 rounded transition-colors ${theme === 'dark' ? 'hover:bg-red-900/30 text-gray-400 hover:text-red-400' : 'hover:bg-red-50 text-gray-500 hover:text-red-500'}`}
+                      title="크롤링 삭제"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                {expandedCrawl[field.name] && (
+                  <div className={`p-2 sm:p-3 border-t max-h-48 overflow-y-auto ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <pre className={`text-xs whitespace-pre-wrap wrap-break-word ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {crawledContent[field.name].slice(0, 2000)}
+                      {crawledContent[field.name].length > 2000 && '...'}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+
             {field.helpText && (
               <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{field.helpText}</p>
             )}
