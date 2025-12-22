@@ -51,7 +51,11 @@ export default function OAuthCallback() {
           id: userData.id,
           email: userData.email,
           name: userData.name,
+          avatarUrl: userData.avatarUrl,
+          provider: userData.provider,
+          emailVerified: userData.emailVerified,
           subscription: userData.subscription || 'FREE',
+          dailyUsageCount: userData.dailyUsageCount,
           createdAt: userData.createdAt || new Date().toISOString(),
           updatedAt: userData.updatedAt || new Date().toISOString(),
         }, token, refreshToken || undefined);

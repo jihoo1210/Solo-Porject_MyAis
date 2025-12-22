@@ -45,6 +45,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                             .provider(provider)
                             .providerId(providerId)
                             .avatarUrl(picture)
+                            .emailVerified(true) // OAuth 로그인 사용자는 이메일 인증 완료
                             .build();
                     return userRepository.save(newUser);
                 });
@@ -62,6 +63,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         }
         if (user.getAvatarUrl() == null && picture != null) {
             user.setAvatarUrl(picture);
+            needsUpdate = true;
+        }
+        // OAuth 로그인 사용자는 이메일 인증 자동 완료
+        if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+            user.setEmailVerified(true);
             needsUpdate = true;
         }
         if (needsUpdate) {

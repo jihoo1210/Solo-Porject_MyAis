@@ -55,6 +55,15 @@ apiClient.interceptors.response.use(
 
     // If 401 and not already retried, try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // USER_NOT_FOUND: 토큰은 유효하지만 DB에 사용자가 없음 (서버 재시작 등)
+      const errorCode = error.response?.data?.error?.code;
+      if (errorCode === 'USER_NOT_FOUND' || errorCode === 'TOKEN_EXPIRED') {
+        const { clearAuth } = useAuthStore.getState();
+        clearAuth();
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
       // refresh 요청 자체가 401이면 로그아웃
       if (originalRequest.url?.includes('/auth/refresh')) {
         const { clearAuth } = useAuthStore.getState();
