@@ -140,6 +140,8 @@ public class AIToolDto {
     @AllArgsConstructor
     public static class OutputConfig {
         private String format = "markdown";
+        private Boolean streaming = true;
+        private Integer maxLength = 2000;
         private Boolean showCopy = true;
         private Boolean showRegenerate = true;
         private Boolean showDownload = false;

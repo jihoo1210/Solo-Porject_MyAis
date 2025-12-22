@@ -24,7 +24,7 @@ public class ExecutionController {
     @PostMapping("/ai-tools/{id}/execute")
     public ApiResponse<ExecutionDto.ExecuteResponse> execute(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody ExecutionDto.ExecuteRequest request) {
         return ApiResponse.success(executionService.execute(userDetails.getUserId(), id, request));
     }
@@ -32,7 +32,7 @@ public class ExecutionController {
     @PostMapping(value = "/ai-tools/{id}/execute/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter executeStream(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody ExecutionDto.ExecuteRequest request) {
         return executionService.executeStream(userDetails.getUserId(), id, request);
     }
@@ -40,23 +40,23 @@ public class ExecutionController {
     @GetMapping("/history")
     public ApiResponse<ExecutionDto.PageResponse> getHistory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam(required = false) UUID aiToolId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "aiToolId", required = false) UUID aiToolId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.success(executionService.getHistory(userDetails.getUserId(), aiToolId, page, size));
     }
 
     @GetMapping("/history/{id}")
     public ApiResponse<ExecutionDto.Response> getExecutionById(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
         return ApiResponse.success(executionService.getExecutionById(userDetails.getUserId(), id));
     }
 
     @DeleteMapping("/history/{id}")
     public ApiResponse<Void> deleteExecution(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
         executionService.deleteExecution(userDetails.getUserId(), id);
         return ApiResponse.success(null, "히스토리가 삭제되었습니다.");
     }
@@ -64,7 +64,7 @@ public class ExecutionController {
     @PostMapping("/history/{id}/favorite")
     public ApiResponse<Map<String, Boolean>> toggleFavorite(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
         boolean isFavorite = executionService.toggleFavorite(userDetails.getUserId(), id);
         return ApiResponse.success(Map.of("isFavorite", isFavorite));
     }

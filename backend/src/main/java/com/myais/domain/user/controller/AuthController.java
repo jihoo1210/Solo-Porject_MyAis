@@ -95,7 +95,7 @@ public class AuthController {
 
     // 비밀번호 재설정 토큰 유효성 검사
     @GetMapping("/validate-reset-token")
-    public ApiResponse<Boolean> validateResetToken(@RequestParam String token) {
+    public ApiResponse<Boolean> validateResetToken(@RequestParam("token") String token) {
         boolean isValid = authService.validateResetToken(token);
         return ApiResponse.success(isValid);
     }

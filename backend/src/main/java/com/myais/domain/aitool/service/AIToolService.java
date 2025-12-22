@@ -70,11 +70,12 @@ public class AIToolService {
             throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
 
-        // Check AI tool limit for free users
-        long userToolCount = aiToolRepository.findByUserId(userId).size();
-        if (userToolCount >= FREE_AI_LIMIT) {
-            // TODO: Check if user is PRO
-            throw new CustomException(ErrorCode.AI_TOOL_LIMIT_EXCEEDED);
+        // Check AI tool limit for free users (PRO users have no limit)
+        if (!"PRO".equals(user.getSubscription())) {
+            long userToolCount = aiToolRepository.findByUserId(userId).size();
+            if (userToolCount >= FREE_AI_LIMIT) {
+                throw new CustomException(ErrorCode.AI_TOOL_LIMIT_EXCEEDED);
+            }
         }
 
         try {

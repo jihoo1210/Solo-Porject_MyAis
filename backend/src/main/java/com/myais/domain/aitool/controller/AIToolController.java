@@ -27,21 +27,21 @@ public class AIToolController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<AIToolDto.Response> getToolById(@PathVariable UUID id) {
+    public ApiResponse<AIToolDto.Response> getToolById(@PathVariable("id") UUID id) {
         return ApiResponse.success(aiToolService.getToolById(id));
     }
 
     @GetMapping("/search")
     public ApiResponse<List<AIToolDto.Response>> searchTools(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam String keyword) {
+            @RequestParam("keyword") String keyword) {
         return ApiResponse.success(aiToolService.searchTools(userDetails.getUserId(), keyword));
     }
 
     @GetMapping("/category/{category}")
     public ApiResponse<List<AIToolDto.Response>> getToolsByCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable String category) {
+            @PathVariable("category") String category) {
         return ApiResponse.success(aiToolService.getToolsByCategory(userDetails.getUserId(), category));
     }
 
@@ -61,7 +61,7 @@ public class AIToolController {
     @PutMapping("/{id}")
     public ApiResponse<AIToolDto.Response> updateTool(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @Valid @RequestBody AIToolDto.UpdateRequest request) {
         return ApiResponse.success(aiToolService.updateTool(userDetails.getUserId(), id, request));
     }
@@ -69,7 +69,7 @@ public class AIToolController {
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteTool(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
         aiToolService.deleteTool(userDetails.getUserId(), id);
         return ApiResponse.success(null, "AI 도구가 삭제되었습니다.");
     }
@@ -77,7 +77,7 @@ public class AIToolController {
     @PostMapping("/{id}/favorite")
     public ApiResponse<Map<String, Boolean>> toggleFavorite(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID id) {
+            @PathVariable("id") UUID id) {
         boolean isFavorite = aiToolService.toggleFavorite(userDetails.getUserId(), id);
         return ApiResponse.success(Map.of("isFavorite", isFavorite));
     }
