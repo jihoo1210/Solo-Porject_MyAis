@@ -43,4 +43,60 @@ public class AuthController {
         // 클라이언트에서 토큰을 삭제하면 됨
         return ApiResponse.success(null, "로그아웃되었습니다.");
     }
+
+    @PutMapping("/profile")
+    public ApiResponse<UserDto.Response> updateProfile(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody AuthDto.ProfileUpdateRequest request) {
+        return ApiResponse.success(authService.updateProfile(userDetails.getUserId(), request.getName()));
+    }
+
+    @PutMapping("/password")
+    public ApiResponse<Void> changePassword(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody AuthDto.PasswordChangeRequest request) {
+        authService.changePassword(userDetails.getUserId(), request.getCurrentPassword(), request.getNewPassword());
+        return ApiResponse.success(null, "비밀번호가 변경되었습니다.");
+    }
+
+    @DeleteMapping("/account")
+    public ApiResponse<Void> deleteAccount(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        authService.deleteAccount(userDetails.getUserId());
+        return ApiResponse.success(null, "계정이 삭제되었습니다.");
+    }
+
+    // 이메일 인증
+    @PostMapping("/verify-email")
+    public ApiResponse<Void> verifyEmail(@Valid @RequestBody AuthDto.EmailVerificationRequest request) {
+        authService.verifyEmail(request.getToken());
+        return ApiResponse.success(null, "이메일 인증이 완료되었습니다.");
+    }
+
+    // 인증 이메일 재발송
+    @PostMapping("/resend-verification")
+    public ApiResponse<Void> resendVerification(@Valid @RequestBody AuthDto.ResendVerificationRequest request) {
+        authService.resendVerificationEmail(request.getEmail());
+        return ApiResponse.success(null, "인증 이메일이 발송되었습니다.");
+    }
+
+    // 비밀번호 찾기 (재설정 이메일 발송)
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody AuthDto.ForgotPasswordRequest request) {
+        authService.forgotPassword(request.getEmail());
+        return ApiResponse.success(null, "비밀번호 재설정 이메일이 발송되었습니다.");
+    }
+
+    // 비밀번호 재설정
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody AuthDto.ResetPasswordRequest request) {
+        authService.resetPassword(request.getToken(), request.getNewPassword());
+        return ApiResponse.success(null, "비밀번호가 재설정되었습니다.");
+    }
+
+    // 비밀번호 재설정 토큰 유효성 검사
+    @GetMapping("/validate-reset-token")
+    public ApiResponse<Boolean> validateResetToken(@RequestParam String token) {
+        boolean isValid = authService.validateResetToken(token);
+        return ApiResponse.success(isValid);
+    }
 }

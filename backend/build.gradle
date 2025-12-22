@@ -44,6 +44,9 @@ dependencies {
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    // Email (Gmail SMTP)
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
     // Web Crawler
     implementation 'org.jsoup:jsoup:1.17.1'
 

@@ -68,11 +68,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             userRepository.save(user);
         }
 
-        // Generate JWT token
+        // Generate JWT tokens
         String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmail());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
 
-        // Redirect to frontend with token
-        String redirectUrl = frontendUrl + "/oauth/callback?token=" + accessToken;
+        // Redirect to frontend with tokens
+        String redirectUrl = frontendUrl + "/oauth/callback?token=" + accessToken + "&refreshToken=" + refreshToken;
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 }

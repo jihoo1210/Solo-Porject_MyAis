@@ -65,6 +65,11 @@ public class AIToolService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        // 이메일 인증 체크
+        if (user.requiresEmailVerification()) {
+            throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
         // Check AI tool limit for free users
         long userToolCount = aiToolRepository.findByUserId(userId).size();
         if (userToolCount >= FREE_AI_LIMIT) {
@@ -84,6 +89,7 @@ public class AIToolService {
                             objectMapper.writeValueAsString(request.getInputFields()) : null)
                     .outputConfig(request.getOutputConfig() != null ?
                             objectMapper.writeValueAsString(request.getOutputConfig()) : null)
+                    .aiModel(request.getAiModel() != null ? request.getAiModel() : "gemini-2.5-flash-lite")
                     .isPublic(request.getIsPublic())
                     .isDefault(false)
                     .build();
@@ -98,6 +104,14 @@ public class AIToolService {
 
     @Transactional
     public AIToolDto.Response updateTool(UUID userId, UUID toolId, AIToolDto.UpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 이메일 인증 체크
+        if (user.requiresEmailVerification()) {
+            throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
         AITool aiTool = aiToolRepository.findById(toolId)
                 .orElseThrow(() -> new CustomException(ErrorCode.AI_TOOL_NOT_FOUND));
 
@@ -119,6 +133,7 @@ public class AIToolService {
                 aiTool.setOutputConfig(objectMapper.writeValueAsString(request.getOutputConfig()));
             }
             if (request.getIsPublic() != null) aiTool.setIsPublic(request.getIsPublic());
+            if (request.getAiModel() != null) aiTool.setAiModel(request.getAiModel());
 
             return AIToolDto.Response.from(aiTool);
         } catch (JsonProcessingException e) {

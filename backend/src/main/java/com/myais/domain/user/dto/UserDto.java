@@ -21,6 +21,8 @@ public class UserDto {
         private String email;
         private String name;
         private String avatarUrl;
+        private String provider; // SNS 로그인 제공자 (null = 일반 로그인)
+        private Boolean emailVerified;
         private String subscription;
         private LocalDateTime subscriptionExpiresAt;
         private Integer dailyUsageCount;
@@ -34,6 +36,8 @@ public class UserDto {
                     .email(user.getEmail())
                     .name(user.getName())
                     .avatarUrl(user.getAvatarUrl())
+                    .provider(user.getProvider())
+                    .emailVerified(user.isEmailVerified())
                     .subscription(user.getSubscription())
                     .subscriptionExpiresAt(user.getSubscriptionExpiresAt())
                     .dailyUsageCount(user.getDailyUsageCount() != null ? user.getDailyUsageCount() : 0)

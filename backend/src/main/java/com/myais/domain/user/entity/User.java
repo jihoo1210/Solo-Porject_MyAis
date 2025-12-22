@@ -40,12 +40,22 @@ public class User {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @Column(name = "email_verified")
+    @Builder.Default
+    private Boolean emailVerified = false;
+
     @Column(length = 20)
     @Builder.Default
     private String subscription = "FREE";
 
     @Column(name = "subscription_expires_at")
     private LocalDateTime subscriptionExpiresAt;
+
+    @Column(name = "billing_key", length = 200)
+    private String billingKey;
+
+    @Column(name = "customer_key", length = 100)
+    private String customerKey;
 
     @Column(name = "daily_usage_count")
     @Builder.Default
@@ -99,5 +109,34 @@ public class User {
     public void expireSubscription() {
         this.subscription = "FREE";
         this.subscriptionExpiresAt = null;
+    }
+
+    // PRO 사용자인지 확인
+    public boolean isPro() {
+        if (!"PRO".equals(this.subscription)) {
+            return false;
+        }
+        // 구독이 만료되지 않았는지 확인
+        return !isSubscriptionExpired();
+    }
+
+    // 이메일 인증 완료
+    public void verifyEmail() {
+        this.emailVerified = true;
+    }
+
+    // 이메일 인증 여부 확인
+    public boolean isEmailVerified() {
+        return Boolean.TRUE.equals(this.emailVerified);
+    }
+
+    // 이메일 인증이 필요한지 확인 (SNS 로그인은 인증 불필요)
+    public boolean requiresEmailVerification() {
+        // SNS 로그인 사용자는 이메일 인증 필요 없음
+        if (this.provider != null && !this.provider.isEmpty()) {
+            return false;
+        }
+        // 일반 회원가입 사용자는 이메일 인증 필요
+        return !isEmailVerified();
     }
 }

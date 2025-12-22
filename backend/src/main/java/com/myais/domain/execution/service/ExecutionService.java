@@ -14,6 +14,7 @@ import com.myais.domain.user.repository.UserRepository;
 import com.myais.global.exception.CustomException;
 import com.myais.global.exception.ErrorCode;
 import com.myais.infra.crawler.CrawlerService;
+import com.myais.infra.gemini.AIModel;
 import com.myais.infra.gemini.GeminiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,11 @@ public class ExecutionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        // 이메일 인증 체크
+        if (user.requiresEmailVerification()) {
+            throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
         // 일일 사용량 초기화 체크 (날짜가 바뀌었으면 초기화)
         checkAndResetDailyUsage(user);
 
@@ -59,17 +65,23 @@ public class ExecutionService {
         AITool aiTool = aiToolRepository.findById(toolId)
                 .orElseThrow(() -> new CustomException(ErrorCode.AI_TOOL_NOT_FOUND));
 
+        // Pro 모델 사용 시 구독 검증
+        String modelId = aiTool.getAiModel() != null ? aiTool.getAiModel() : "gemini-2.5-flash-lite";
+        if (AIModel.isProModel(modelId) && !user.isPro()) {
+            throw new CustomException(ErrorCode.PRO_SUBSCRIPTION_REQUIRED);
+        }
+
         // Build user message from inputs
         String userMessage = buildUserMessage(aiTool, request.getInputs());
 
         // 실행 시간 측정 시작
         long startTime = System.currentTimeMillis();
 
-        // Call Gemini API
+        // Call Gemini API with selected model
         GeminiClient.ChatResponse chatResponse = geminiClient.chat(
                 aiTool.getSystemPrompt(),
                 userMessage,
-                "gemini-2.0-flash-lite",
+                modelId,
                 0.7,
                 2048
         );
@@ -117,6 +129,11 @@ public class ExecutionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        // 이메일 인증 체크
+        if (user.requiresEmailVerification()) {
+            throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
         // 일일 사용량 초기화 체크 (날짜가 바뀌었으면 초기화)
         checkAndResetDailyUsage(user);
 
@@ -128,6 +145,12 @@ public class ExecutionService {
         AITool aiTool = aiToolRepository.findById(toolId)
                 .orElseThrow(() -> new CustomException(ErrorCode.AI_TOOL_NOT_FOUND));
 
+        // Pro 모델 사용 시 구독 검증
+        String modelId = aiTool.getAiModel() != null ? aiTool.getAiModel() : "gemini-2.5-flash-lite";
+        if (AIModel.isProModel(modelId) && !user.isPro()) {
+            throw new CustomException(ErrorCode.PRO_SUBSCRIPTION_REQUIRED);
+        }
+
         String userMessage = buildUserMessage(aiTool, request.getInputs());
 
         // Increment user's daily usage count
@@ -136,12 +159,12 @@ public class ExecutionService {
 
         SseEmitter emitter = new SseEmitter(300000L); // 5 minutes timeout
 
-        // Execute in separate thread
+        // Execute in separate thread with selected model
         new Thread(() -> {
             geminiClient.chatStream(
                     aiTool.getSystemPrompt(),
                     userMessage,
-                    "gemini-2.0-flash-lite",
+                    modelId,
                     0.7,
                     2048,
                     emitter
