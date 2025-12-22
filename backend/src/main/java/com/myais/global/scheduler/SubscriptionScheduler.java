@@ -2,6 +2,7 @@ package com.myais.global.scheduler;
 
 import com.myais.domain.user.entity.User;
 import com.myais.domain.user.repository.UserRepository;
+import com.myais.infra.email.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,6 +18,7 @@ import java.util.List;
 public class SubscriptionScheduler {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     /**
      * 매일 자정에 FREE 사용자의 일일 사용량 초기화
@@ -81,8 +83,13 @@ public class SubscriptionScheduler {
             if (user.getSubscriptionExpiresAt() != null
                 && user.getSubscriptionExpiresAt().isBefore(threeDaysFromNow)
                 && user.getSubscriptionExpiresAt().isAfter(LocalDateTime.now())) {
-                // TODO: 이메일 알림 발송
-                log.info("Subscription expiring soon for user: {}, expires at: {}",
+                // 이메일 알림 발송
+                emailService.sendSubscriptionExpiringEmail(
+                    user.getEmail(),
+                    user.getName(),
+                    user.getSubscriptionExpiresAt()
+                );
+                log.info("Subscription expiring notification sent to user: {}, expires at: {}",
                     user.getEmail(), user.getSubscriptionExpiresAt());
             }
         }
