@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Zap, Crown, Loader2 } from 'lucide-react';
+import { Check, Zap, Crown, Loader2, CreditCard } from 'lucide-react';
 import { useAuthStore } from '../store';
 import { paymentApi } from '../api';
 
@@ -14,13 +14,11 @@ const PLANS = [
     features: [
       'AI 도구 3개 생성',
       '일 20회 실행',
-      '기본 AI 모델',
-      '기본 지원',
+      'Gemini 2.5 Flash Lite 모델',
+      '이미지 분석 기능',
+      'URL 크롤링',
     ],
-    limitations: [
-      '고급 기능 제한',
-      '우선 지원 없음',
-    ],
+    limitations: ['고급 모델 사용 불가'],
   },
   {
     id: 'PRO',
@@ -31,11 +29,11 @@ const PLANS = [
     features: [
       'AI 도구 무제한 생성',
       '무제한 실행',
-      'GPT-4 접근',
+      'Gemini 2.5 Flash 모델',
+      'Gemini 2.5 Pro 사용 가능',
+      'Nano Banana (Gemini 3 Preview)',
       '이미지 분석 기능',
       'URL 크롤링',
-      '우선 지원',
-      '커스텀 API 키 사용',
     ],
     limitations: [],
     recommended: true,
@@ -45,45 +43,58 @@ const PLANS = [
 export default function Payment() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [selectedPlan, setSelectedPlan] = useState<string>('PRO');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubscribe = async () => {
-    if (selectedPlan === 'FREE') {
+  const currentPlan = user?.subscription || 'FREE';
+
+  const handleSubscribe = async (planId: string) => {
+    if (planId === 'FREE') {
       navigate('/dashboard');
       return;
     }
 
     setIsLoading(true);
+    setError(null);
+
     try {
-      const response = await paymentApi.createSubscription(selectedPlan);
+      // 1. customerKey 가져오기
+      const customerKeyResponse = await paymentApi.getCustomerKey();
+      const customerKey = customerKeyResponse.customerKey;
 
-      // TossPayments SDK 호출
-      if (window.TossPayments) {
-        const tossPayments = window.TossPayments(
-          import.meta.env.VITE_TOSS_CLIENT_KEY
-        );
-
-        await tossPayments.requestPayment('카드', {
-          amount: 9900,
-          orderId: response.orderId,
-          orderName: 'MyAIs Pro 구독',
-          customerName: user?.name,
-          successUrl: `${window.location.origin}/payment/success`,
-          failUrl: `${window.location.origin}/payment/fail`,
-        });
-      } else {
-        // Fallback: Direct API call
-        window.location.href = response.checkoutUrl;
+      // 2. TossPayments SDK 확인
+      if (typeof window.TossPayments === 'undefined') {
+        throw new Error('결제 모듈을 불러오는데 실패했습니다. 페이지를 새로고침해주세요.');
       }
-    } catch (error) {
-      console.error('Payment failed:', error);
-    } finally {
+
+      // 3. 클라이언트 키
+      const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY;
+
+      // 4. TossPayments 인스턴스 생성 및 빌링키 발급 요청
+      const tossPayments = window.TossPayments(clientKey);
+      const payment = tossPayments.payment({ customerKey });
+
+      // 플랜 정보 저장 (성공 페이지에서 사용)
+      localStorage.setItem('selectedPlan', JSON.stringify({
+        id: 'PRO',
+        price: 9900,
+        name: 'Pro 월간 구독',
+      }));
+
+      await payment.requestBillingAuth({
+        method: 'CARD',
+        customerEmail: user?.email,
+        customerName: user?.name,
+        successUrl: `${window.location.origin}/payment/billing-success`,
+        failUrl: `${window.location.origin}/payment/billing-fail`,
+      });
+    } catch (err) {
+      console.error('Payment initiation failed:', err);
+      const errorMessage = err instanceof Error ? err.message : '결제 처리 중 오류가 발생했습니다.';
+      setError(errorMessage);
       setIsLoading(false);
     }
   };
-
-  const currentPlan = user?.subscription || 'FREE';
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6">
@@ -95,24 +106,26 @@ export default function Payment() {
         </p>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4 mb-6">
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
+
       {/* Plans */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {PLANS.map((plan) => {
           const isCurrentPlan = currentPlan === plan.id;
-          const isSelected = selectedPlan === plan.id;
+          const isPro = plan.id === 'PRO';
 
           return (
-            <button
+            <div
               key={plan.id}
-              onClick={() => setSelectedPlan(plan.id)}
-              className={`relative rounded-xl sm:rounded-2xl p-4 sm:p-6 text-left transition-all flex flex-col ${
-                isSelected
-                  ? plan.id === 'PRO'
-                    ? 'bg-gradient-to-b from-indigo-600 to-purple-700 ring-2 ring-indigo-400 shadow-lg shadow-indigo-500/25'
-                    : 'bg-gray-800 ring-2 ring-primary-500'
-                  : plan.id === 'PRO'
-                    ? 'bg-gradient-to-b from-indigo-600/80 to-purple-700/80 hover:from-indigo-600 hover:to-purple-700'
-                    : 'bg-gray-800 border border-gray-700 hover:border-gray-600'
+              className={`relative rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col ${
+                isPro
+                  ? 'bg-gradient-to-b from-indigo-600 to-purple-700 ring-2 ring-indigo-400 shadow-lg shadow-indigo-500/25'
+                  : 'bg-gray-800 border border-gray-700'
               }`}
             >
               {plan.recommended && (
@@ -130,9 +143,7 @@ export default function Payment() {
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">{plan.name}</h2>
               <div className="mb-4 sm:mb-6">
                 <span className="text-3xl sm:text-4xl font-bold text-white">
-                  {plan.price === 0
-                    ? '₩0'
-                    : `₩${plan.price.toLocaleString()}`}
+                  {plan.price === 0 ? '₩0' : `₩${plan.price.toLocaleString()}`}
                 </span>
                 {plan.price > 0 && (
                   <span className="text-sm sm:text-base text-gray-300">/{plan.period}</span>
@@ -151,54 +162,48 @@ export default function Payment() {
                     key={limitation}
                     className="flex items-center gap-2 text-xs sm:text-sm text-gray-400"
                   >
-                    <span className="w-4 h-4 flex items-center justify-center">
-                      ×
-                    </span>
+                    <span className="w-4 h-4 flex items-center justify-center">×</span>
                     <span>{limitation}</span>
                   </li>
                 ))}
               </ul>
 
-              <div
-                className={`w-full py-2.5 sm:py-3 text-center font-semibold rounded-lg sm:rounded-xl transition-all text-sm sm:text-base ${
-                  plan.id === 'PRO'
-                    ? 'bg-white text-indigo-600 hover:bg-gray-100'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+              <button
+                onClick={() => handleSubscribe(plan.id)}
+                disabled={isLoading || isCurrentPlan}
+                className={`w-full py-2.5 sm:py-3 text-center font-semibold rounded-lg sm:rounded-xl transition-all text-sm sm:text-base flex items-center justify-center gap-2 ${
+                  isCurrentPlan
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : isPro
+                      ? 'bg-white text-indigo-600 hover:bg-gray-100'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 }`}
               >
-                {plan.id === 'FREE' ? '시작하기' : '구독하기'}
-              </div>
-            </button>
+                {isLoading && isPro ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    처리 중...
+                  </>
+                ) : isCurrentPlan ? (
+                  '현재 이용 중'
+                ) : isPro ? (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    ₩9,900/월 구독하기
+                  </>
+                ) : (
+                  '무료로 시작하기'
+                )}
+              </button>
+
+              {isPro && !isCurrentPlan && (
+                <p className="text-xs text-gray-300/80 text-center mt-2">
+                  언제든지 취소 가능 · 매월 자동 결제
+                </p>
+              )}
+            </div>
           );
         })}
-      </div>
-
-      {/* Subscribe Button */}
-      <div className="text-center">
-        <button
-          onClick={handleSubscribe}
-          disabled={isLoading || currentPlan === selectedPlan}
-          className="inline-flex items-center px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-lg bg-primary-600 hover:bg-primary-700 disabled:bg-gray-700 disabled:text-gray-400 text-white rounded-lg sm:rounded-xl font-semibold transition-all w-full sm:w-auto justify-center"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
-              처리 중...
-            </>
-          ) : currentPlan === selectedPlan ? (
-            '현재 이용 중인 플랜입니다'
-          ) : selectedPlan === 'FREE' ? (
-            'Free 플랜으로 시작하기'
-          ) : (
-            `Pro 플랜 구독하기 (₩9,900/월)`
-          )}
-        </button>
-
-        {selectedPlan === 'PRO' && (
-          <p className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">
-            언제든지 취소할 수 있습니다. 취소 후에도 결제 기간까지 이용 가능합니다.
-          </p>
-        )}
       </div>
 
       {/* FAQ */}
@@ -209,11 +214,10 @@ export default function Payment() {
         <div className="space-y-3 sm:space-y-4">
           <div className="bg-white/5 rounded-lg sm:rounded-xl border border-gray-700/20 p-3 sm:p-4 backdrop-blur-sm">
             <h3 className="font-medium text-white mb-1 sm:mb-2 text-sm sm:text-base">
-              결제는 어떻게 진행되나요?
+              정기 결제는 어떻게 진행되나요?
             </h3>
             <p className="text-gray-400 text-xs sm:text-sm">
-              토스페이먼츠를 통해 안전하게 결제됩니다. 신용카드, 체크카드를 사용할
-              수 있습니다.
+              카드 정보를 등록하면 매월 자동으로 결제됩니다. 토스페이먼츠를 통해 안전하게 처리됩니다.
             </p>
           </div>
           <div className="bg-white/5 rounded-lg sm:rounded-xl border border-gray-700/20 p-3 sm:p-4 backdrop-blur-sm">
@@ -244,21 +248,23 @@ export default function Payment() {
   );
 }
 
-// TossPayments SDK type declaration
+// TossPayments SDK v2 type declarations
+interface TossPaymentInstance {
+  requestBillingAuth: (options: {
+    method: 'CARD';
+    customerEmail?: string;
+    customerName?: string;
+    successUrl: string;
+    failUrl: string;
+  }) => Promise<void>;
+}
+
+interface TossPayments {
+  payment: (options: { customerKey: string }) => TossPaymentInstance;
+}
+
 declare global {
   interface Window {
-    TossPayments: (clientKey: string) => {
-      requestPayment: (
-        method: string,
-        options: {
-          amount: number;
-          orderId: string;
-          orderName: string;
-          customerName?: string;
-          successUrl: string;
-          failUrl: string;
-        }
-      ) => Promise<void>;
-    };
+    TossPayments: (clientKey: string) => TossPayments;
   }
 }
