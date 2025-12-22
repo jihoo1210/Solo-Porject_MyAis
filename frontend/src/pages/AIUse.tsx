@@ -18,10 +18,17 @@ export default function AIUse() {
   const [isLoading, setIsLoading] = useState(true);
   const [isExecuting, setIsExecuting] = useState(false);
   const [result, setResult] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [isStreaming, setIsStreaming] = useState(false);
   const [lastInputData, setLastInputData] = useState<Record<string, unknown> | null>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 이미지 생성 모델인지 확인
+  const isImageGenerationModel = tool?.aiModel?.includes('image-generation') ||
+    tool?.aiModel?.includes('image-preview') ||
+    tool?.aiModel === 'gemini-2.5-flash-preview-image-generation' ||
+    tool?.aiModel === 'gemini-3-pro-image-preview';
 
   // FREE 사용자 일일 제한 체크
   const isFreeTier = !user?.subscription || user.subscription === 'FREE';
@@ -67,20 +74,46 @@ export default function AIUse() {
 
     setIsExecuting(true);
     setResult('');
+    setImageUrl(undefined);
     setExecutionError(null);
     setLastInputData(inputData);
 
     try {
-      if (tool.outputConfig?.streaming) {
+      // 이미지 생성 모델은 스트리밍 사용하지 않음
+      if (tool.outputConfig?.streaming && !isImageGenerationModel) {
         setIsStreaming(true);
         abortControllerRef.current = new AbortController();
 
         const response = await executionApi.executeStream(tool.id, inputData);
+
+        // HTTP 에러 응답 처리
+        if (!response.ok) {
+          let errorMessage = '스트리밍 실행 중 오류가 발생했습니다.';
+          try {
+            const errorData = await response.json();
+            if (errorData.code === 'T003') {
+              errorMessage = '일일 사용 한도에 도달했습니다. Premium으로 업그레이드하세요.';
+              await refreshUser();
+            } else if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+          } catch {
+            // JSON 파싱 실패 시 기본 메시지 사용
+          }
+          setExecutionError(errorMessage);
+          return;
+        }
+
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
 
-        if (reader) {
-          let accumulatedResult = '';
+        if (!reader) {
+          setExecutionError('스트리밍 응답을 읽을 수 없습니다.');
+          return;
+        }
+
+        let accumulatedResult = '';
+        try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -93,6 +126,14 @@ export default function AIUse() {
                 const data = line.slice(5).trim();
                 if (data === '[DONE]') {
                   setIsStreaming(false);
+                } else if (data.startsWith('{"error":')) {
+                  // SSE 에러 이벤트 처리
+                  try {
+                    const errorData = JSON.parse(data);
+                    setExecutionError(errorData.error || '스트리밍 중 오류가 발생했습니다.');
+                  } catch {
+                    setExecutionError('스트리밍 중 오류가 발생했습니다.');
+                  }
                 } else {
                   try {
                     const parsed = JSON.parse(data);
@@ -107,6 +148,11 @@ export default function AIUse() {
               }
             }
           }
+        } catch (streamError) {
+          console.error('Stream reading error:', streamError);
+          if (!accumulatedResult) {
+            setExecutionError('스트리밍이 중단되었습니다. 다시 시도해주세요.');
+          }
         }
       } else {
         const execution: Execution = await executionApi.execute(tool.id, inputData);
@@ -116,6 +162,10 @@ export default function AIUse() {
               ? execution.result
               : JSON.stringify(execution.result)
           );
+        }
+        // 이미지 URL이 있으면 설정
+        if (execution.imageUrl) {
+          setImageUrl(execution.imageUrl);
         }
       }
     } catch (error: unknown) {
@@ -254,6 +304,7 @@ export default function AIUse() {
           ) : (
             <AIResult
               result={result}
+              imageUrl={imageUrl}
               outputConfig={tool.outputConfig}
               onRetry={handleRetry}
               isStreaming={isStreaming}

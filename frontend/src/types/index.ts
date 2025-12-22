@@ -84,6 +84,7 @@ export interface AITool {
   inputFields: InputField[];
   outputConfig?: OutputConfig;
   personality?: AIPersonality;
+  aiModel?: string;
   isPublic?: boolean;
   isDefault?: boolean;
   usageCount?: number;
@@ -99,6 +100,7 @@ export interface CreateAIToolRequest {
   systemPrompt: string;
   inputFields: Omit<InputField, 'id'>[];
   outputConfig: OutputConfig;
+  aiModel?: string;
   isPublic: boolean;
 }
 
@@ -122,6 +124,7 @@ export interface Execution {
   aiToolIcon?: string;
   inputData: Record<string, unknown>;
   output?: string;
+  imageUrl?: string;  // AI가 생성한 이미지 URL
   result?: string | Record<string, unknown>;
   status?: 'PENDING' | 'SUCCESS' | 'FAILED';
   executionTime?: number;
@@ -133,6 +136,7 @@ export interface Execution {
 export interface ExecuteResponse {
   id: string;
   result: string;
+  imageUrl?: string;  // AI가 생성한 이미지 URL
   usage: {
     promptTokens: number;
     completionTokens: number;

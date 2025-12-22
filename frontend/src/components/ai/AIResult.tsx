@@ -4,6 +4,7 @@ import { OutputConfig } from '../../types';
 
 interface AIResultProps {
   result: string;
+  imageUrl?: string;  // AI가 생성한 이미지 URL
   outputConfig?: OutputConfig;
   onRetry?: () => void;
   isStreaming?: boolean;
@@ -11,6 +12,7 @@ interface AIResultProps {
 
 export default function AIResult({
   result,
+  imageUrl,
   outputConfig,
   onRetry,
   isStreaming,
@@ -23,7 +25,27 @@ export default function AIResult({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    // 이미지 URL이 있으면 이미지 다운로드
+    if (imageUrl) {
+      try {
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ai-image-${Date.now()}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Image download failed:', error);
+        // 폴백: 새 탭에서 열기
+        window.open(imageUrl, '_blank');
+      }
+      return;
+    }
+
+    // 텍스트 다운로드
     const blob = new Blob([result], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -121,13 +143,24 @@ export default function AIResult({
       </div>
 
       <div className="p-4 sm:p-6">
+        {/* 이미지가 있으면 먼저 표시 */}
+        {imageUrl && (
+          <div className="mb-4">
+            <img
+              src={imageUrl}
+              alt="AI 생성 이미지"
+              className="max-w-full h-auto rounded-lg mx-auto border border-gray-700/30"
+              loading="lazy"
+            />
+          </div>
+        )}
         {result ? (
           renderResult()
-        ) : (
+        ) : !imageUrl ? (
           <div className="text-center py-6 sm:py-8 text-gray-400 text-sm sm:text-base">
             결과가 여기에 표시됩니다
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -186,6 +219,9 @@ function parseMarkdown(text: string): string {
   // 연속된 li 태그를 ul/ol로 감싸기
   result = result.replace(/(<li class="ml-4 list-disc[^>]*>.*?<\/li>(\n|<br \/>)?)+/g, '<ul class="my-2 space-y-1 list-disc list-inside">$&</ul>');
   result = result.replace(/(<li class="ml-4 list-decimal[^>]*>.*?<\/li>(\n|<br \/>)?)+/g, '<ol class="my-2 space-y-1 list-decimal list-inside">$&</ol>');
+
+  // 이미지 ![alt](url) - 링크보다 먼저 처리
+  result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded-lg my-4 mx-auto border border-gray-700/30" loading="lazy" />');
 
   // 링크 [text](url)
   result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-400 hover:underline" target="_blank" rel="noopener">$1</a>');
