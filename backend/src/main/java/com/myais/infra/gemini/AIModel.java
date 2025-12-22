@@ -7,17 +7,21 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum AIModel {
     // Free tier models
-    GEMINI_FLASH_LITE("gemini-2.5-flash-lite", "Gemini Flash Lite", "빠르고 가벼운 모델 (무료)", false),
+    GEMINI_FLASH_LITE("gemini-2.5-flash-lite", "Gemini Flash Lite", "빠르고 가벼운 모델 (무료)", false, false),
 
-    // Pro tier models
-    GEMINI_FLASH("gemini-2.5-flash", "Gemini 2.5 Flash", "가격-성능 최적화 모델", true),
-    GEMINI_PRO("gemini-2.5-pro", "Gemini 2.5 Pro", "고급 추론 모델", true),
-    NANO_BANANA("gemini-3-flash-preview", "Nano Banana", "최신 Gemini 3 Flash (Preview)", true);
+    // Pro tier models - Text
+    GEMINI_FLASH("gemini-2.5-flash", "Gemini 2.5 Flash", "가격-성능 최적화 모델", true, false),
+    GEMINI_PRO("gemini-2.5-pro", "Gemini 2.5 Pro", "고급 추론 모델", true, false),
+
+    // Pro tier models - Image Generation
+    NANO_BANANA("gemini-2.5-flash-preview-image-generation", "Nano Banana", "이미지 생성 모델", true, true),
+    NANO_BANANA_PRO("gemini-3-pro-image-preview", "Nano Banana Pro", "고품질 이미지 생성 (4K)", true, true);
 
     private final String modelId;
     private final String displayName;
     private final String description;
     private final boolean proRequired;
+    private final boolean imageGeneration;
 
     public static AIModel fromModelId(String modelId) {
         if (modelId == null || modelId.isEmpty()) {
@@ -34,5 +38,10 @@ public enum AIModel {
     public static boolean isProModel(String modelId) {
         AIModel model = fromModelId(modelId);
         return model.isProRequired();
+    }
+
+    public static boolean isImageGenerationModel(String modelId) {
+        AIModel model = fromModelId(modelId);
+        return model.isImageGeneration();
     }
 }

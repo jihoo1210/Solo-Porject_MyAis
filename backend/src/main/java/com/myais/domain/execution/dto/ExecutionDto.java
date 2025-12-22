@@ -30,6 +30,7 @@ public class ExecutionDto {
     public static class ExecuteResponse {
         private UUID id;
         private String result;
+        private String imageUrl;  // AI가 생성한 이미지 URL (있는 경우)
         private Usage usage;
         private LocalDateTime createdAt;
     }
@@ -55,6 +56,7 @@ public class ExecutionDto {
         private String aiToolIcon;
         private Map<String, Object> inputData;
         private String output;
+        private String imageUrl;  // AI가 생성한 이미지 URL (있는 경우)
         private Boolean isFavorite;
         private Long executionTime; // 밀리초 단위
         private Integer tokensUsed;
@@ -68,6 +70,7 @@ public class ExecutionDto {
                     .aiToolName(execution.getAiTool().getName())
                     .aiToolIcon(execution.getAiTool().getIcon())
                     .output(execution.getOutput())
+                    .imageUrl(execution.getImageUrl())
                     .isFavorite(execution.getIsFavorite())
                     .executionTime(execution.getExecutionTime())
                     .tokensUsed(execution.getTokensUsed())

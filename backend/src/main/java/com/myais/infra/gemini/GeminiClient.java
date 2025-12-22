@@ -47,6 +47,16 @@ public class GeminiClient {
         private Integer totalTokens;
     }
 
+    // 이미지 생성 응답 클래스
+    @Getter
+    @AllArgsConstructor
+    public static class ImageGenerationResponse {
+        private String text;           // 텍스트 응답 (있는 경우)
+        private String imageBase64;    // Base64 인코딩된 이미지
+        private String mimeType;       // 이미지 MIME 타입 (image/png 등)
+        private Integer totalTokens;
+    }
+
     public ChatResponse chat(String systemPrompt, String userMessage) {
         return chat(systemPrompt, userMessage, defaultModel, 0.7, 2048);
     }
@@ -226,6 +236,94 @@ public class GeminiClient {
             try {
                 emitter.completeWithError(e);
             } catch (Exception ignored) {}
+        }
+    }
+
+    /**
+     * 이미지 생성 API 호출 (Nano Banana / Nano Banana Pro)
+     * Gemini 2.5 Flash Image 또는 Gemini 3 Pro Image 모델 사용
+     */
+    public ImageGenerationResponse generateImage(String systemPrompt, String userMessage, String model) {
+        try {
+            String apiUrl = API_BASE_URL + model + ":generateContent?key=" + apiKey;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, Object> requestBody = new HashMap<>();
+
+            // System instruction (이미지 생성 지침 포함)
+            String enhancedSystemPrompt = systemPrompt + "\n\n[이미지 생성 모드] 사용자의 요청에 맞는 이미지를 생성해주세요.";
+            requestBody.put("systemInstruction", Map.of(
+                "parts", List.of(Map.of("text", enhancedSystemPrompt))
+            ));
+
+            // User content
+            requestBody.put("contents", List.of(
+                Map.of("parts", List.of(Map.of("text", userMessage)))
+            ));
+
+            // Generation config - 이미지 생성 설정
+            Map<String, Object> generationConfig = new HashMap<>();
+            generationConfig.put("responseModalities", List.of("TEXT", "IMAGE"));
+            requestBody.put("generationConfig", generationConfig);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+            log.info("Calling Gemini Image Generation API with model: {}", model);
+
+            ResponseEntity<JsonNode> response = restTemplate.exchange(
+                    apiUrl,
+                    HttpMethod.POST,
+                    request,
+                    JsonNode.class
+            );
+
+            JsonNode body = response.getBody();
+            log.debug("Image generation response: {}", body);
+
+            if (body != null && body.has("candidates") && body.get("candidates").size() > 0) {
+                JsonNode content = body.get("candidates").get(0).get("content");
+                if (content != null && content.has("parts")) {
+                    String text = null;
+                    String imageBase64 = null;
+                    String mimeType = null;
+
+                    // parts를 순회하며 텍스트와 이미지 추출
+                    for (JsonNode part : content.get("parts")) {
+                        if (part.has("text")) {
+                            text = part.get("text").asText();
+                        }
+                        if (part.has("inlineData")) {
+                            JsonNode inlineData = part.get("inlineData");
+                            imageBase64 = inlineData.get("data").asText();
+                            mimeType = inlineData.get("mimeType").asText();
+                        }
+                    }
+
+                    // 토큰 사용량 추출
+                    Integer totalTokens = null;
+                    if (body.has("usageMetadata") && body.get("usageMetadata").has("totalTokenCount")) {
+                        totalTokens = body.get("usageMetadata").get("totalTokenCount").asInt();
+                    }
+
+                    if (imageBase64 != null) {
+                        log.info("Image generated successfully, mimeType: {}", mimeType);
+                        return new ImageGenerationResponse(text, imageBase64, mimeType, totalTokens);
+                    } else if (text != null) {
+                        // 이미지 없이 텍스트만 반환된 경우
+                        log.warn("No image in response, only text returned");
+                        return new ImageGenerationResponse(text, null, null, totalTokens);
+                    }
+                }
+            }
+
+            throw new CustomException(ErrorCode.EXECUTION_FAILED, "이미지 생성에 실패했습니다.");
+        } catch (CustomException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Gemini Image Generation API call failed", e);
+            throw new CustomException(ErrorCode.EXECUTION_FAILED, "이미지 생성 중 오류: " + e.getMessage());
         }
     }
 }

@@ -16,6 +16,7 @@ import com.myais.global.exception.ErrorCode;
 import com.myais.infra.crawler.CrawlerService;
 import com.myais.infra.gemini.AIModel;
 import com.myais.infra.gemini.GeminiClient;
+import com.myais.infra.s3.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,7 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -42,6 +45,7 @@ public class ExecutionService {
     private final UserRepository userRepository;
     private final GeminiClient geminiClient;
     private final CrawlerService crawlerService;
+    private final S3Service s3Service;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -77,14 +81,52 @@ public class ExecutionService {
         // 실행 시간 측정 시작
         long startTime = System.currentTimeMillis();
 
-        // Call Gemini API with selected model
-        GeminiClient.ChatResponse chatResponse = geminiClient.chat(
-                aiTool.getSystemPrompt(),
-                userMessage,
-                modelId,
-                0.7,
-                2048
-        );
+        // 이미지 생성 모델인지 확인
+        boolean isImageModel = AIModel.isImageGenerationModel(modelId);
+
+        String resultText;
+        String imageUrl = null;
+        Integer totalTokens = null;
+
+        if (isImageModel) {
+            // 이미지 생성 모델 처리
+            GeminiClient.ImageGenerationResponse imageResponse = geminiClient.generateImage(
+                    aiTool.getSystemPrompt(),
+                    userMessage,
+                    modelId
+            );
+
+            totalTokens = imageResponse.getTotalTokens();
+
+            // 이미지가 생성된 경우 S3에 저장
+            if (imageResponse.getImageBase64() != null) {
+                imageUrl = saveBase64ImageToS3(imageResponse.getImageBase64(), imageResponse.getMimeType());
+                // 결과에 이미지 URL과 텍스트 포함
+                resultText = imageResponse.getText() != null
+                        ? imageResponse.getText() + "\n\n![생성된 이미지](" + imageUrl + ")"
+                        : "![생성된 이미지](" + imageUrl + ")";
+            } else {
+                resultText = imageResponse.getText() != null
+                        ? imageResponse.getText()
+                        : "이미지 생성에 실패했습니다.";
+            }
+        } else {
+            // 일반 텍스트 모델 처리
+            int maxLength = getMaxLengthFromOutputConfig(aiTool);
+            String enhancedSystemPrompt = buildEnhancedSystemPrompt(aiTool.getSystemPrompt(), maxLength);
+            int maxTokens = Math.max(512, (int) (maxLength * 0.7));
+
+            GeminiClient.ChatResponse chatResponse = geminiClient.chat(
+                    enhancedSystemPrompt,
+                    userMessage,
+                    modelId,
+                    0.7,
+                    maxTokens
+            );
+
+            resultText = chatResponse.getText();
+            totalTokens = chatResponse.getTotalTokens();
+        }
 
         // 실행 시간 측정 종료
         long executionTime = System.currentTimeMillis() - startTime;
@@ -102,19 +144,21 @@ public class ExecutionService {
                     .user(user)
                     .aiTool(aiTool)
                     .inputData(objectMapper.writeValueAsString(request.getInputs()))
-                    .output(chatResponse.getText())
+                    .output(resultText)
+                    .imageUrl(imageUrl)
                     .executionTime(executionTime)
-                    .tokensUsed(chatResponse.getTotalTokens())
+                    .tokensUsed(totalTokens)
                     .build();
 
             executionRepository.save(execution);
 
             return ExecutionDto.ExecuteResponse.builder()
                     .id(execution.getId())
-                    .result(chatResponse.getText())
+                    .result(resultText)
+                    .imageUrl(imageUrl)
                     .usage(ExecutionDto.Usage.builder()
                             .promptTokens(0)
-                            .completionTokens(chatResponse.getTotalTokens() != null ? chatResponse.getTotalTokens() : 0)
+                            .completionTokens(totalTokens != null ? totalTokens : 0)
                             .build())
                     .createdAt(execution.getCreatedAt())
                     .build();
@@ -153,6 +197,13 @@ public class ExecutionService {
 
         String userMessage = buildUserMessage(aiTool, request.getInputs());
 
+        // Get maxLength from outputConfig and build enhanced system prompt
+        int maxLength = getMaxLengthFromOutputConfig(aiTool);
+        String enhancedSystemPrompt = buildEnhancedSystemPrompt(aiTool.getSystemPrompt(), maxLength);
+
+        // maxTokens 계산 (한글 기준 약 2자당 1토큰, 마진 포함)
+        int maxTokens = Math.max(512, (int) (maxLength * 0.7));
+
         // Increment user's daily usage count
         user.incrementDailyUsage();
         userRepository.save(user);
@@ -162,11 +213,11 @@ public class ExecutionService {
         // Execute in separate thread with selected model
         new Thread(() -> {
             geminiClient.chatStream(
-                    aiTool.getSystemPrompt(),
+                    enhancedSystemPrompt,
                     userMessage,
                     modelId,
                     0.7,
-                    2048,
+                    maxTokens,
                     emitter
             );
         }).start();
@@ -322,5 +373,53 @@ public class ExecutionService {
         return executions.stream()
                 .map(ExecutionDto.Response::from)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * outputConfig JSON에서 maxLength 값을 추출
+     */
+    private int getMaxLengthFromOutputConfig(AITool aiTool) {
+        if (aiTool.getOutputConfig() == null || aiTool.getOutputConfig().isEmpty()) {
+            return 2000; // 기본값
+        }
+        try {
+            AIToolDto.OutputConfig outputConfig = objectMapper.readValue(
+                    aiTool.getOutputConfig(), AIToolDto.OutputConfig.class);
+            return outputConfig.getMaxLength() != null ? outputConfig.getMaxLength() : 2000;
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to parse outputConfig, using default maxLength", e);
+            return 2000;
+        }
+    }
+
+    /**
+     * advancedSettings JSON에서 설정 값들을 추출
+     */
+    private AIToolDto.AdvancedSettings getAdvancedSettings(AITool aiTool) {
+        // advancedSettings 파싱 시도 (AITool 엔티티에 해당 필드가 있다면)
+        // 현재는 기본값 반환
+        return new AIToolDto.AdvancedSettings();
+    }
+
+    /**
+     * 시스템 프롬프트에 길이 제한 지침을 추가하여 자연스럽게 끝나도록 함
+     */
+    private String buildEnhancedSystemPrompt(String originalPrompt, int maxLength) {
+        StringBuilder enhanced = new StringBuilder(originalPrompt);
+        enhanced.append("\n\n---\n");
+        enhanced.append("## 중요 지침 (응답 형식)\n");
+        enhanced.append("- 응답은 반드시 ").append(maxLength).append("자 이내로 작성하세요.\n");
+        enhanced.append("- 응답이 중간에 끊기지 않도록 자연스럽게 문장을 마무리하세요.\n");
+        enhanced.append("- 내용이 길어질 경우, 핵심 내용을 우선하여 간결하게 작성하세요.\n");
+        enhanced.append("- 마지막 문장은 반드시 완전한 문장으로 끝내세요.\n");
+        enhanced.append("- 글자 수 제한 때문에 내용이 부족해 보이면 안 됩니다. 제한 내에서 완결성 있게 작성하세요.\n");
+        return enhanced.toString();
+    }
+
+    /**
+     * Base64 인코딩된 이미지를 S3에 저장하고 URL 반환
+     */
+    private String saveBase64ImageToS3(String base64Data, String mimeType) {
+        return s3Service.uploadBase64Image(base64Data, mimeType);
     }
 }

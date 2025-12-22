@@ -114,6 +114,47 @@ public class S3Service {
         }
     }
 
+    /**
+     * Base64 인코딩된 이미지를 S3에 업로드
+     * AI 이미지 생성 결과를 저장하는 데 사용
+     */
+    public String uploadBase64Image(String base64Data, String mimeType) {
+        try {
+            // MIME 타입에서 확장자 추출
+            String extension = ".png";
+            if (mimeType != null) {
+                if (mimeType.contains("jpeg") || mimeType.contains("jpg")) {
+                    extension = ".jpg";
+                } else if (mimeType.contains("gif")) {
+                    extension = ".gif";
+                } else if (mimeType.contains("webp")) {
+                    extension = ".webp";
+                }
+            }
+
+            String key = "ai-generated/" + UUID.randomUUID() + extension;
+
+            // Base64 디코딩
+            byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Data);
+
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(mimeType != null ? mimeType : "image/png")
+                    .build();
+
+            s3Client.putObject(request, RequestBody.fromBytes(imageBytes));
+
+            log.info("AI generated image uploaded to S3: {}", key);
+
+            // Presigned URL 생성 (7일 유효)
+            return generatePresignedUrl(key);
+        } catch (Exception e) {
+            log.error("Failed to upload base64 image to S3", e);
+            throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED, "AI 생성 이미지 저장 실패");
+        }
+    }
+
     private void validateImageFile(MultipartFile file) {
         if (file.isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_FILE_TYPE, "파일이 비어있습니다.");

@@ -39,6 +39,9 @@ public class Execution {
     @Column(columnDefinition = "TEXT")
     private String output;
 
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
+
     @Column(name = "is_favorite")
     @Builder.Default
     private Boolean isFavorite = false;
