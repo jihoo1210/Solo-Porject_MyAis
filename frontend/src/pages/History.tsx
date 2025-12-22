@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, Search, Filter, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { Execution } from '../types';
 import { historyApi } from '../api';
 
 export default function History() {
   const [executions, setExecutions] = useState<Execution[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -18,6 +19,7 @@ export default function History() {
 
   const fetchHistory = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await historyApi.getAll({
         page,
@@ -28,6 +30,7 @@ export default function History() {
       setTotalPages(response.totalPages);
     } catch (error) {
       console.error('Failed to fetch history:', error);
+      setError('실행 기록을 불러오는데 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -104,6 +107,18 @@ export default function History() {
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 rounded-xl border bg-red-900/20 border-red-700/30 backdrop-blur-sm">
+          <AlertCircle className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 text-red-400" />
+          <p className="text-sm sm:text-base text-red-300 mb-4">{error}</p>
+          <button
+            onClick={fetchHistory}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/30 hover:bg-red-600/50 text-red-300 rounded-lg transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            다시 시도
+          </button>
         </div>
       ) : filteredExecutions.length === 0 ? (
         <div className="text-center py-12 rounded-xl border bg-white/5 border-gray-700/20 backdrop-blur-sm">

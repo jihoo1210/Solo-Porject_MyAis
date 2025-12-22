@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Key, CreditCard, LogOut, Loader2, Save, Trash2, ChevronLeft } from 'lucide-react';
+import { User, Key, CreditCard, LogOut, Loader2, Save, Trash2, ChevronLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../store';
 import { authApi, paymentApi } from '../api';
@@ -16,6 +16,12 @@ interface PasswordFormData {
   confirmPassword: string;
 }
 
+type ToastType = 'success' | 'error';
+interface Toast {
+  type: ToastType;
+  message: string;
+}
+
 export default function Settings() {
   const navigate = useNavigate();
   const { user, logout, setUser } = useAuthStore();
@@ -23,6 +29,12 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(true);
+  const [toast, setToast] = useState<Toast | null>(null);
+
+  const showToast = (type: ToastType, message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const profileForm = useForm<ProfileFormData>({
     defaultValues: {
@@ -38,8 +50,10 @@ export default function Settings() {
     try {
       const updatedUser = await authApi.updateProfile(data);
       setUser(updatedUser);
+      showToast('success', '프로필이 업데이트되었습니다.');
     } catch (error) {
       console.error('Failed to update profile:', error);
+      showToast('error', '프로필 업데이트에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -57,11 +71,13 @@ export default function Settings() {
     try {
       await authApi.changePassword(data.currentPassword, data.newPassword);
       passwordForm.reset();
+      showToast('success', '비밀번호가 변경되었습니다.');
     } catch (error) {
       console.error('Failed to change password:', error);
       passwordForm.setError('currentPassword', {
         message: '현재 비밀번호가 올바르지 않습니다',
       });
+      showToast('error', '비밀번호 변경에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -75,8 +91,10 @@ export default function Settings() {
       await paymentApi.cancelSubscription();
       const updatedUser = await authApi.me();
       setUser(updatedUser);
+      showToast('success', '구독이 취소되었습니다.');
     } catch (error) {
       console.error('Failed to cancel subscription:', error);
+      showToast('error', '구독 취소에 실패했습니다.');
     } finally {
       setIsCanceling(false);
     }
@@ -98,6 +116,7 @@ export default function Settings() {
       navigate('/');
     } catch (error) {
       console.error('Failed to delete account:', error);
+      showToast('error', '계정 삭제에 실패했습니다.');
     }
   };
 
@@ -114,6 +133,22 @@ export default function Settings() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transition-all ${
+          toast.type === 'success'
+            ? 'bg-green-900/90 text-green-300 border border-green-700/50'
+            : 'bg-red-900/90 text-red-300 border border-red-700/50'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle className="w-5 h-5" />
+          ) : (
+            <AlertCircle className="w-5 h-5" />
+          )}
+          <span className="text-sm">{toast.message}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl font-bold text-white">설정</h1>

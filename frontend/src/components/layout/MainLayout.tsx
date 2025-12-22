@@ -1,11 +1,18 @@
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import { useUIStore } from '../../store';
+import { useUIStore, useAuthStore } from '../../store';
 import NeuralNetwork from '../three/NeuralNetwork';
 
 export default function MainLayout() {
   const { sidebarOpen, theme } = useUIStore();
+  const { refreshUser } = useAuthStore();
+
+  // 앱 로드 시 사용자 정보 갱신
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
 
   return (
     <div className={`min-h-screen relative ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>

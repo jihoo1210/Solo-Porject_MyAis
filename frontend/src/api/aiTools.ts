@@ -53,20 +53,22 @@ export const aiToolsApi = {
     data: ExecuteRequest,
     onChunk: (chunk: string) => void
   ): Promise<void> => {
+    const token = localStorage.getItem('accessToken');
     const response = await fetch(
       `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/v1/ai-tools/${id}/execute/stream`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('auth-storage') ? JSON.parse(localStorage.getItem('auth-storage')!).state?.accessToken : ''}`,
+          Authorization: token ? `Bearer ${token}` : '',
         },
         body: JSON.stringify(data),
       }
     );
 
     if (!response.ok) {
-      throw new Error('Stream request failed');
+      const errorText = await response.text();
+      throw new Error(errorText || 'Stream request failed');
     }
 
     const reader = response.body?.getReader();

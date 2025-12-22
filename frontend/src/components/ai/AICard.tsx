@@ -24,7 +24,7 @@ export default function AICard({
   const { user } = useAuthStore();
 
   // 이메일 인증 필요 여부 (SNS 로그인 제외)
-  const needsEmailVerification = user && !user.emailVerified && !user.provider;
+  const needsEmailVerification = !!(user && !user.emailVerified && !user.provider);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

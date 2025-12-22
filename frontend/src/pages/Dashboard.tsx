@@ -135,19 +135,19 @@ export default function Dashboard() {
         </div>
 
         {/* Daily Usage Stats for FREE users */}
-        {isFreeTier && (
+        {isFreeTier && user?.dailyUsageCount !== undefined && (
           <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-gray-700/30">
             <Zap className="w-5 h-5 text-primary-400" />
             <div>
               <p className="text-xs text-gray-400">오늘 사용량</p>
               <p className="text-sm font-medium text-white">
-                <span className={user?.dailyUsageCount && user.dailyUsageCount >= FREE_DAILY_LIMIT ? 'text-red-400' : 'text-primary-400'}>
-                  {user?.dailyUsageCount ?? 0}
+                <span className={user.dailyUsageCount >= FREE_DAILY_LIMIT ? 'text-red-400' : 'text-primary-400'}>
+                  {user.dailyUsageCount}
                 </span>
                 <span className="text-gray-400"> / {FREE_DAILY_LIMIT}회</span>
               </p>
             </div>
-            {user?.dailyUsageCount && user.dailyUsageCount >= FREE_DAILY_LIMIT && (
+            {user.dailyUsageCount >= FREE_DAILY_LIMIT && (
               <Link
                 to="/payment"
                 className="ml-2 px-2 py-1 text-xs bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30"

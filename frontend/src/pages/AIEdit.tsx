@@ -29,7 +29,7 @@ export default function AIEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const isPro = user?.subscription === 'PRO' || user?.subscription === 'PREMIUM';
+  const isPro = user?.subscription === 'PRO';
   const [tool, setTool] = useState<AITool | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
