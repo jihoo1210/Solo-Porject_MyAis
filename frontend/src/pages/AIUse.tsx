@@ -27,8 +27,7 @@ export default function AIUse() {
   // 이미지 생성 모델인지 확인
   const isImageGenerationModel = tool?.aiModel?.includes('image-generation') ||
     tool?.aiModel?.includes('image-preview') ||
-    tool?.aiModel === 'gemini-2.5-flash-preview-image-generation' ||
-    tool?.aiModel === 'gemini-3-pro-image-preview';
+    tool?.aiModel === 'gemini-2.0-flash-preview-image-generation';
 
   // FREE 사용자 일일 제한 체크
   const isFreeTier = !user?.subscription || user.subscription === 'FREE';

@@ -22,10 +22,15 @@ interface FormData {
 const EMOJI_OPTIONS = ['🐶', '🐱', '🐰', '🦊', '🐻', '🐼', '🐨', '🦁', '🐯', '🐸', '🐧', '🦄'];
 
 const AI_MODELS = [
-  { id: 'gemini-2.5-flash-lite', name: 'Gemini Flash Lite', description: '빠르고 가벼운 모델', proRequired: false },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: '가격-성능 최적화 모델', proRequired: true },
-  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '고급 추론 모델', proRequired: true },
-  { id: 'gemini-3-flash-preview', name: 'Nano Banana', description: '최신 Gemini 3 Flash (Preview)', proRequired: true },
+  // Free tier
+  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', description: '초고속 경량 모델 (무료)', proRequired: false },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: '빠르고 효율적인 모델 (무료)', proRequired: false },
+  // Gemini 2.5
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: '균형 잡힌 성능 모델', proRequired: true },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '고급 추론 및 코딩 모델', proRequired: true },
+  // Gemini 3 (Latest)
+  { id: 'gemini-3-flash', name: 'Gemini 3 Flash', description: '최신 고속 모델 (2025.12)', proRequired: true },
+  { id: 'gemini-3-pro', name: 'Gemini 3 Pro', description: '최고 성능 추론 모델 (1M 컨텍스트)', proRequired: true },
 ];
 
 export default function AIBuilder() {
