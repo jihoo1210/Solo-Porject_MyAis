@@ -147,7 +147,7 @@ uploadClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for uploadClient - Unwrap ApiResponse wrapper
+// Response interceptor for uploadClient - Unwrap ApiResponse wrapper + Token refresh
 uploadClient.interceptors.response.use(
   (response) => {
     if (response.data && typeof response.data === 'object' && 'success' in response.data) {
@@ -155,5 +155,62 @@ uploadClient.interceptors.response.use(
     }
     return response;
   },
-  (error) => Promise.reject(error)
+  async (error) => {
+    const originalRequest = error.config;
+
+    // 401 에러 시 토큰 갱신 시도
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      const errorCode = error.response?.data?.error?.code;
+      if (errorCode === 'USER_NOT_FOUND' || errorCode === 'TOKEN_EXPIRED') {
+        const { clearAuth } = useAuthStore.getState();
+        clearAuth();
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return uploadClient(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const { refreshToken, setTokens, clearAuth } = useAuthStore.getState();
+
+      if (!refreshToken) {
+        clearAuth();
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      try {
+        const response = await axios.post(`${API_BASE_URL}/v1/auth/refresh`, {
+          refreshToken,
+        });
+
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data.data || response.data;
+        setTokens(newAccessToken, newRefreshToken);
+        processQueue(null, newAccessToken);
+
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return uploadClient(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        clearAuth();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
 );

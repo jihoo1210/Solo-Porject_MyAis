@@ -4,6 +4,8 @@ import com.myais.global.common.ApiResponse;
 import com.myais.infra.crawler.CrawlerService;
 import com.myais.infra.s3.S3Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,20 +20,29 @@ public class UtilsController {
     private final S3Service s3Service;
 
     @PostMapping("/crawl")
-    public ApiResponse<Map<String, String>> crawlUrl(@RequestBody Map<String, String> request) {
+    public ApiResponse<Map<String, String>> crawlUrl(
+            @AuthenticationPrincipal UserDetails user,
+            @RequestBody Map<String, String> request) {
+        // 인증된 사용자만 크롤링 가능
         String url = request.get("url");
         String content = crawlerService.crawl(url);
         return ApiResponse.success(Map.of("content", content));
     }
 
     @PostMapping("/upload")
-    public ApiResponse<Map<String, String>> uploadImage(@RequestPart("file") MultipartFile file) {
+    public ApiResponse<Map<String, String>> uploadImage(
+            @AuthenticationPrincipal UserDetails user,
+            @RequestPart("file") MultipartFile file) {
+        // 인증된 사용자만 업로드 가능
         String imageUrl = s3Service.uploadImage(file);
         return ApiResponse.success(Map.of("url", imageUrl));
     }
 
     @DeleteMapping("/image")
-    public ApiResponse<Void> deleteImage(@RequestBody Map<String, String> request) {
+    public ApiResponse<Void> deleteImage(
+            @AuthenticationPrincipal UserDetails user,
+            @RequestBody Map<String, String> request) {
+        // 인증된 사용자만 삭제 가능
         String imageUrl = request.get("url");
         if (imageUrl != null && !imageUrl.isEmpty()) {
             s3Service.deleteFile(imageUrl);

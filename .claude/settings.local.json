@@ -26,7 +26,8 @@
       "Bash(tasklist /FI \"IMAGENAME eq java.exe\")",
       "Bash(curl:*)",
       "Bash(ls -la \"c:\\\\dev\\\\Portfolios\\\\Solo\\\\Solo-Porject_MyAis\\\\backend\\\\src\\\\main\\\\resources\"\" 2>/dev/null || dir \"c:devPortfoliosSoloSolo-Porject_MyAisbackendsrcmainresources\"\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git pull:*)"
     ]
   }
 }

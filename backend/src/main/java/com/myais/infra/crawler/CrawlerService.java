@@ -10,8 +10,11 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -19,6 +22,12 @@ public class CrawlerService {
 
     private static final int TIMEOUT_MS = 10000;
     private static final int MAX_CONTENT_LENGTH = 10000;
+
+    // SSRF 방지를 위한 차단 호스트 목록
+    private static final Set<String> BLOCKED_HOSTS = Set.of(
+            "localhost", "127.0.0.1", "0.0.0.0", "::1",
+            "metadata.google.internal", "169.254.169.254"
+    );
 
     public String crawl(String urlString) {
         validateUrl(urlString);
@@ -43,6 +52,27 @@ public class CrawlerService {
             if (!protocol.equals("http") && !protocol.equals("https")) {
                 throw new CustomException(ErrorCode.INVALID_URL, "HTTP 또는 HTTPS URL만 지원합니다.");
             }
+
+            // SSRF 방지: 내부 네트워크 접근 차단
+            String host = url.getHost().toLowerCase();
+
+            // 차단된 호스트 확인
+            if (BLOCKED_HOSTS.contains(host)) {
+                throw new CustomException(ErrorCode.INVALID_URL, "내부 네트워크 접근이 차단되었습니다.");
+            }
+
+            // IP 주소 범위 확인
+            try {
+                InetAddress address = InetAddress.getByName(host);
+                if (address.isLoopbackAddress() || address.isSiteLocalAddress() ||
+                    address.isLinkLocalAddress() || address.isAnyLocalAddress()) {
+                    throw new CustomException(ErrorCode.INVALID_URL, "내부 네트워크 접근이 차단되었습니다.");
+                }
+            } catch (UnknownHostException e) {
+                // 호스트를 확인할 수 없는 경우 허용 (DNS 조회 실패는 Jsoup에서 처리)
+                log.debug("Could not resolve host: {}", host);
+            }
+
         } catch (MalformedURLException e) {
             throw new CustomException(ErrorCode.INVALID_URL);
         }
